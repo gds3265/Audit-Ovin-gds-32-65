@@ -7,10 +7,44 @@
 <style>
 :root{--g:#315b47;--g2:#e8f2ed;--bg:#f5f6f4;--card:#fff;--txt:#1f2b25;--muted:#65736b;--line:#d8dfdb;--ok:#dff3e4;--warn:#fff1c7;--bad:#f8d7da;--blue:#e6efff}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}header{position:sticky;top:0;z-index:5;background:var(--g);color:white;padding:14px 16px;box-shadow:0 2px 8px #0002}.brand{font-size:19px;font-weight:800}.sub{font-size:12px;opacity:.9}.wrap{max-width:1100px;margin:auto;padding:12px}.tabs{display:flex;gap:7px;overflow:auto;padding-bottom:8px}.tabs button{white-space:nowrap;border:0;border-radius:999px;padding:10px 14px;background:white;color:var(--g);font-weight:700;box-shadow:0 1px 4px #0001}.tabs button.active{background:var(--g);color:white}.panel{display:none}.panel.active{display:block}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;box-shadow:0 2px 7px #0000000b}.card h2,.card h3{margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px}.field input,.field select,.field textarea{width:100%;border:1px solid #bdc8c1;border-radius:9px;padding:10px;background:#fff;font-size:15px}.field textarea{min-height:76px}.actions{display:flex;flex-wrap:wrap;gap:8px}.btn{border:0;border-radius:10px;padding:10px 13px;background:var(--g);color:white;font-weight:750}.btn.alt{background:#edf2ef;color:var(--g);border:1px solid #b9c8c0}.btn.danger{background:#9b2f35}.badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800}.ok{background:var(--ok);color:#17622c}.warn{background:var(--warn);color:#795b00}.bad{background:var(--bad);color:#8a2630}.info{background:var(--blue);color:#285596}.subject{border-left:5px solid var(--g);padding-left:12px}.measure-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}.measure{border:1px solid var(--line);border-radius:10px;padding:8px}.measure label{display:block;font-size:12px;font-weight:700;color:var(--muted)}.measure input,.measure select{width:100%;margin-top:4px;border:1px solid #c6cec9;border-radius:8px;padding:8px}.result{margin-top:5px;font-size:12px}.list-item{border-bottom:1px solid var(--line);padding:10px 0}.list-item:last-child{border:0}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.kpi{background:var(--g2);border-radius:12px;padding:10px;text-align:center}.kpi b{display:block;font-size:22px}.small{font-size:12px;color:var(--muted)}.notice{background:#fff7dc;border:1px solid #eed28a;border-radius:12px;padding:10px}.hidden{display:none}@media(max-width:620px){.wrap{padding:8px}.card{padding:11px}.kpis{grid-template-columns:1fr}.measure-grid{grid-template-columns:repeat(2,1fr)}}@media print{header,.tabs,.no-print{display:none!important}.panel{display:block!important}.card{break-inside:avoid;box-shadow:none}}
+
+.login-screen{position:fixed;inset:0;z-index:100;background:linear-gradient(160deg,#315b47,#203d31);display:flex;align-items:center;justify-content:center;padding:18px}
+.login-screen.hidden{display:none}
+.login-box{width:min(430px,100%);background:#fff;border-radius:18px;padding:22px;box-shadow:0 18px 60px #0005}
+.login-box h1{margin:0 0 4px;color:var(--g);font-size:24px}
+.login-box p{margin:4px 0 14px;color:var(--muted)}
+.login-box label{display:block;font-size:12px;font-weight:800;color:var(--muted);margin:10px 0 4px}
+.login-box input{width:100%;border:1px solid #bdc8c1;border-radius:10px;padding:11px;font-size:16px}
+.login-msg{min-height:22px;margin-top:10px;font-size:13px;color:#8a2630}
+.login-config{margin-top:12px;padding-top:12px;border-top:1px solid var(--line)}
+.header-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.header-user{font-size:12px;opacity:.92;display:flex;gap:7px;align-items:center}
+.header-user button{border:1px solid #ffffff66;background:#ffffff18;color:#fff;border-radius:8px;padding:5px 8px;font-weight:700}
+
 </style>
 </head>
 <body>
-<header><div class="brand">🐑 Audit Ovin GDS 32-65</div><div class="sub" id="activeVisit">Aucune visite active</div><div class="sub" id="cloudStatus">☁️ Supabase à configurer</div></header>
+<div id="loginScreen" class="login-screen">
+  <div class="login-box">
+    <h1>🐑 Audit Ovin GDS 32-65</h1>
+    <p>Connexion avec les mêmes identifiants que l’Audit Bovin.</p>
+    <label>E-mail</label><input id="loginEmail" type="email" autocomplete="username">
+    <label>Mot de passe</label><input id="loginPassword" type="password" autocomplete="current-password">
+    <div class="actions" style="margin-top:12px"><button class="btn" onclick="signIn()">Se connecter</button></div>
+    <div id="loginMessage" class="login-msg"></div>
+    <details class="login-config"><summary>Configurer Supabase sur cet appareil</summary>
+      <label>URL Supabase</label><input id="loginSupaUrl">
+      <label>Clé publique Supabase</label><input id="loginSupaKey" type="password" placeholder="sb_publishable_... ou anon key">
+      <div class="actions" style="margin-top:10px"><button class="btn alt" onclick="saveLoginCloudConfig()">Enregistrer</button></div>
+    </details>
+  </div>
+</div>
+<header>
+  <div class="header-row">
+    <div><div class="brand">🐑 Audit Ovin GDS 32-65</div><div class="sub" id="activeVisit">Aucune visite active</div><div class="sub" id="cloudStatus">☁️ Supabase à configurer</div></div>
+    <div id="userBox" class="header-user hidden"><span id="userBadge"></span><button onclick="signOut()">Déconnexion</button></div>
+  </div>
+</header>
 <div class="wrap">
 <nav class="tabs no-print" id="tabs"></nav>
 <section id="home" class="panel active"></section>
@@ -28,17 +62,81 @@
 </div>
 <script>
 const APP='auditOvinGDS_v1';
-const APP_VERSION='1.2';
+const APP_VERSION='1.3';
 const DEFAULT_SUPABASE_URL='https://ckylznynqsefqkmtjcjf.supabase.co';
 const CLOUD_ID='audit-ovin-main';
 let cloudTimer=null, cloudBusy=false;
-function cloudCfg(){return {url:(localStorage.getItem('auditOvin.supabaseUrl')||DEFAULT_SUPABASE_URL).replace(/\/rest\/v1\/?$/,'').replace(/\/$/,''),key:localStorage.getItem('auditOvin.supabaseKey')||''}}
+let authSession=JSON.parse(localStorage.getItem('auditOvin.authSession')||'null');
+let currentProfile=null;
+function cloudCfg(){return {url:(localStorage.getItem('auditOvin.supabaseUrl')||localStorage.getItem('parage.supabaseUrl')||DEFAULT_SUPABASE_URL).replace(/\/rest\/v1\/?$/,'').replace(/\/$/,''),key:localStorage.getItem('auditOvin.supabaseKey')||localStorage.getItem('parage.supabaseKey')||''}}
 function setCloudStatus(txt){let e=document.getElementById('cloudStatus');if(e)e.textContent=txt}
-async function supa(path,opt={}){let c=cloudCfg();if(!c.key)throw new Error('Clé publique Supabase non renseignée');let h=Object.assign({'apikey':c.key,'Authorization':'Bearer '+c.key,'Content-Type':'application/json'},opt.headers||{});return fetch(c.url+'/rest/v1/'+path,Object.assign({},opt,{headers:h}))}
+function authHeaders(extra={}){let c=cloudCfg();return Object.assign({'apikey':c.key,'Content-Type':'application/json'},authSession?.access_token?{'Authorization':'Bearer '+authSession.access_token}:{},extra)}
+async function supa(path,opt={}){let c=cloudCfg();if(!c.key)throw new Error('Clé publique Supabase non renseignée');if(!authSession?.access_token)throw new Error('Utilisateur non connecté');let h=Object.assign(authHeaders(),opt.headers||{});let r=await fetch(c.url+'/rest/v1/'+path,Object.assign({},opt,{headers:h}));if(r.status===401&&await refreshAuthSession()){h=Object.assign(authHeaders(),opt.headers||{});r=await fetch(c.url+'/rest/v1/'+path,Object.assign({},opt,{headers:h}))}return r}
+
+function saveLoginCloudConfig(){
+  let u=(document.getElementById('loginSupaUrl').value||'').trim().replace(/\/rest\/v1\/?$/,'').replace(/\/$/,'');
+  let k=(document.getElementById('loginSupaKey').value||'').trim();
+  if(!u||!k){document.getElementById('loginMessage').textContent='Renseignez l’URL et la clé publique.';return}
+  localStorage.setItem('auditOvin.supabaseUrl',u);localStorage.setItem('auditOvin.supabaseKey',k);
+  document.getElementById('loginMessage').textContent='Configuration Supabase enregistrée.';
+}
+async function signIn(){
+  let email=(document.getElementById('loginEmail').value||'').trim(),password=document.getElementById('loginPassword').value||'',c=cloudCfg();
+  if(!c.key){document.getElementById('loginMessage').textContent='Configurez d’abord la clé publique Supabase.';return}
+  if(!email||!password){document.getElementById('loginMessage').textContent='Saisissez l’e-mail et le mot de passe.';return}
+  document.getElementById('loginMessage').textContent='Connexion…';
+  try{
+    let r=await fetch(c.url+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':c.key,'Content-Type':'application/json'},body:JSON.stringify({email,password})});
+    let data=await r.json();if(!r.ok)throw new Error(data.error_description||data.msg||'Connexion refusée');
+    authSession=data;localStorage.setItem('auditOvin.authSession',JSON.stringify(data));
+    await loadCurrentProfile();enterApplication();
+  }catch(e){document.getElementById('loginMessage').textContent=e.message||'Erreur de connexion'}
+}
+async function refreshAuthSession(){
+  if(!authSession?.refresh_token)return false;let c=cloudCfg();if(!c.key)return false;
+  try{let r=await fetch(c.url+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':c.key,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:authSession.refresh_token})});if(!r.ok)return false;authSession=await r.json();localStorage.setItem('auditOvin.authSession',JSON.stringify(authSession));return true}catch{return false}
+}
+async function loadCurrentProfile(){
+  let c=cloudCfg();let r=await fetch(c.url+'/rest/v1/profiles?id=eq.'+encodeURIComponent(authSession.user.id)+'&select=id,email,display_name,role,active',{headers:authHeaders()});
+  if(r.status===401&&await refreshAuthSession())return loadCurrentProfile();
+  if(!r.ok)throw new Error('Profil utilisateur introuvable.');
+  let rows=await r.json();if(!rows.length)throw new Error('Aucun profil associé à ce compte.');
+  currentProfile=rows[0];if(currentProfile.active===false)throw new Error('Ce compte a été désactivé.');
+}
+function enterApplication(){
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('userBox').classList.remove('hidden');
+  document.getElementById('userBadge').textContent=(currentProfile.display_name||currentProfile.email)+' · '+(currentProfile.role||'technicien');
+  setCloudStatus('☁️ Connecté');
+  cloudRestoreSilent();
+}
+async function signOut(){
+  try{let c=cloudCfg();await fetch(c.url+'/auth/v1/logout',{method:'POST',headers:authHeaders()})}catch{}
+  authSession=null;currentProfile=null;localStorage.removeItem('auditOvin.authSession');location.reload();
+}
+async function cloudRestoreSilent(){
+  try{
+    let r=await supa('ovin_backups?id=eq.'+encodeURIComponent(CLOUD_ID)+'&select=payload,updated_at',{method:'GET'});
+    if(!r.ok)return;let rows=await r.json();
+    if(rows.length&&rows[0].payload){db=rows[0].payload;localStorage.setItem(APP,JSON.stringify(db));renderAll();setCloudStatus('☁️ Cloud à jour')}
+  }catch(e){console.warn('Restauration silencieuse impossible',e)}
+}
+async function initAuth(){
+  let c=cloudCfg();
+  document.getElementById('loginSupaUrl').value=c.url;
+  document.getElementById('loginSupaKey').value=c.key;
+  if(!c.key){document.getElementById('loginMessage').textContent='Configurez la clé publique Supabase une fois sur cet appareil.';return}
+  if(authSession?.access_token){
+    try{await loadCurrentProfile();enterApplication();return}catch(e){
+      if(await refreshAuthSession()){try{await loadCurrentProfile();enterApplication();return}catch{}}
+      authSession=null;localStorage.removeItem('auditOvin.authSession');
+    }
+  }
+}
 function scheduleCloudSync(){clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudBackup(false),1200)}
 async function cloudBackup(showMessage=true){if(cloudBusy)return false;let c=cloudCfg();if(!c.key){setCloudStatus('☁️ Supabase à configurer');if(showMessage)alert('Renseignez la clé publique Supabase dans Sauvegarde.');return false}cloudBusy=true;setCloudStatus('☁️ Synchronisation…');try{let payload={id:CLOUD_ID,payload:db,updated_at:new Date().toISOString()};let r=await supa('ovin_backups?on_conflict=id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});if(!r.ok)throw new Error(await r.text());localStorage.setItem('auditOvin.lastSync',new Date().toISOString());setCloudStatus('☁️ Cloud à jour');if(showMessage)alert('Sauvegarde Supabase effectuée.');return true}catch(e){console.error(e);setCloudStatus('☁️ En attente d’envoi');if(showMessage)alert('Synchronisation impossible : '+e.message);return false}finally{cloudBusy=false}}
 async function cloudRestore(){let c=cloudCfg();if(!c.key)return alert('Renseignez d’abord la clé publique Supabase.');if(!confirm('Restaurer les données Ovin depuis Supabase ? Les données locales seront remplacées par la sauvegarde cloud.'))return;setCloudStatus('☁️ Restauration…');try{let r=await supa('ovin_backups?id=eq.'+encodeURIComponent(CLOUD_ID)+'&select=payload,updated_at',{method:'GET'});if(!r.ok)throw new Error(await r.text());let rows=await r.json();if(!rows.length)return alert('Aucune sauvegarde Ovin trouvée dans Supabase.');db=rows[0].payload;localStorage.setItem(APP,JSON.stringify(db));renderAll();setCloudStatus('☁️ Cloud restauré');alert('Restauration terminée.')}catch(e){setCloudStatus('☁️ Erreur cloud');alert('Restauration impossible : '+e.message)}}
-function saveCloudConfig(){let u=(document.getElementById('supaUrl').value||'').trim().replace(/\/rest\/v1\/?$/,'').replace(/\/$/,'');let k=(document.getElementById('supaKey').value||'').trim();localStorage.setItem('auditOvin.supabaseUrl',u||DEFAULT_SUPABASE_URL);localStorage.setItem('auditOvin.supabaseKey',k);renderBackup();if(k){setCloudStatus('☁️ Prêt à synchroniser');cloudBackup(false)}else setCloudStatus('☁️ Supabase à configurer')}
+function saveCloudConfig(){let u=(document.getElementById('supaUrl').value||'').trim().replace(/\/rest\/v1\/?$/,'').replace(/\/$/,'');let k=(document.getElementById('supaKey').value||'').trim();localStorage.setItem('auditOvin.supabaseUrl',u||DEFAULT_SUPABASE_URL);localStorage.setItem('auditOvin.supabaseKey',k);if(document.getElementById('loginSupaUrl'))document.getElementById('loginSupaUrl').value=u||DEFAULT_SUPABASE_URL;if(document.getElementById('loginSupaKey'))document.getElementById('loginSupaKey').value=k;renderBackup();if(k){setCloudStatus('☁️ Prêt à synchroniser');cloudBackup(false)}else setCloudStatus('☁️ Supabase à configurer')}
 async function testCloud(){let c=cloudCfg();if(!c.key)return alert('Renseignez la clé publique Supabase.');try{let r=await supa('ovin_backups?select=id&limit=1',{method:'GET'});if(!r.ok)throw new Error(await r.text());setCloudStatus('☁️ Connexion Supabase OK');alert('Connexion Supabase Ovin OK.')}catch(e){setCloudStatus('☁️ Erreur Supabase');alert('Connexion impossible : '+e.message)}}
 const tabs=[['home','Accueil'],['farm','Exploitation'],['visits','Visites'],['subjects','Sujets / lots'],['measurements','Mesures'],['flock','Audit troupeau'],['feed','Alimentation'],['building','Bâtiment / eau'],['analysis','Analyse'],['actions','Plan d’action'],['report','Rapport'],['backup','Sauvegarde']];
 const stages=['Brebis en lactation','Brebis taries','Préparation mise-bas','Agneaux naissance','Agneaux J+1'];
@@ -84,10 +182,10 @@ function renderAnalysis(){let fs=getFindings();analysis.innerHTML=`<div class="c
 function renderActions(){let v=activeVisit();if(!v){actions.innerHTML='<div class="card">Ouvrez une visite.</div>';return}actions.innerHTML=`<div class="card"><h2>Ajouter une action</h2><div class="grid"><div class="field"><label>Thème</label><select id="atheme"><option>Alimentation</option><option>Agnelage / colostrum</option><option>Parasitisme</option><option>Boiteries</option><option>Bâtiment</option><option>Eau</option><option>Sanitaire</option></select></div><div class="field"><label>Priorité</label><select id="ap"><option>Haute</option><option>Moyenne</option><option>Basse</option></select></div><div class="field"><label>Échéance</label><input id="ad" type="date"></div></div><div class="field"><label>Action concrète</label><textarea id="atxt"></textarea></div><button class="btn" onclick="addAction()">Ajouter</button></div><div class="card"><h3>Plan d’action</h3>${v.actions.map((a,i)=>`<div class="list-item"><span class="badge ${a.priority==='Haute'?'bad':a.priority==='Moyenne'?'warn':'info'}">${a.priority}</span> <b>${esc(a.theme)}</b> — ${esc(a.text)}<br><span class="small">Échéance : ${esc(a.date||'non définie')}</span></div>`).join('')||'<span class="small">Aucune action.</span>'}</div>`}
 function addAction(){let v=activeVisit();if(!atxt.value.trim())return;v.actions.push({theme:atheme.value,priority:ap.value,date:ad.value,text:atxt.value.trim(),status:'À faire'});save()}
 function renderReport(){let v=activeVisit(),f=activeFarm();if(!v){report.innerHTML='<div class="card">Ouvrez une visite.</div>';return}let ss=db.subjects.filter(s=>s.visitId===v.id),fs=getFindings();report.innerHTML=`<div class="card"><h2>Compte rendu – Audit Ovin</h2><p><b>${esc(f?.name||'')}</b><br>${esc(f?.owner||'')} • EDE ${esc(f?.ede||'')} • ${esc(f?.commune||'')}<br>Visite du ${v.date} – ${esc(v.type)} – ${esc(v.tech||'')}</p></div><div class="card"><h3>Sujets / lots observés</h3>${ss.map(s=>`<div>${esc(s.name)} — ${esc(s.stage)} — effectif ${s.count||1}</div>`).join('')||'Aucun'}</div><div class="card"><h3>Points à approfondir</h3>${fs.map(x=>`<div>• ${esc(x.text)}</div>`).join('')||'Aucun écart automatique détecté.'}</div><div class="card"><h3>Plan d’action</h3>${v.actions.map(a=>`<div>• <b>${esc(a.theme)}</b> – ${esc(a.text)} (${esc(a.priority)})</div>`).join('')||'Aucune action.'}</div><div class="card"><h3>Conclusion technicien</h3><textarea onchange="activeVisit().conclusion=this.value;save()">${esc(v.conclusion||'')}</textarea></div><div class="actions no-print"><button class="btn" onclick="window.print()">Imprimer / PDF</button><button class="btn alt" onclick="exportVisit()">Exporter la visite JSON</button></div>`}
-function renderBackup(){let c=cloudCfg();backup.innerHTML=`<div class="card"><h2>Supabase / synchronisation</h2><div class="grid"><div class="field"><label>URL Supabase</label><input id="supaUrl" value="${esc(c.url)}"></div><div class="field"><label>Clé publique Supabase</label><input id="supaKey" type="password" value="${esc(c.key)}" placeholder="sb_publishable_... ou anon key"></div></div><div class="actions"><button class="btn" onclick="saveCloudConfig()">Enregistrer Supabase</button><button class="btn alt" onclick="testCloud()">Tester la connexion</button><button class="btn alt" onclick="cloudBackup(true)">Synchroniser maintenant</button><button class="btn alt" onclick="cloudRestore()">Restaurer depuis le cloud</button></div><p class="small">Projet préconfiguré : ${esc(DEFAULT_SUPABASE_URL)}. Les données Ovin utilisent uniquement la table <b>ovin_backups</b>.</p></div><div class="card"><h2>Sauvegarde de secours</h2><div class="actions"><button class="btn" onclick="downloadAll()">Télécharger la sauvegarde complète</button><label class="btn alt">Restaurer JSON<input class="hidden" type="file" accept="application/json" onchange="restoreFile(this.files[0])"></label><button class="btn danger" onclick="if(confirm('Tout effacer sur cet appareil ?')){localStorage.removeItem(APP);location.reload()}">Effacer les données locales</button></div><p class="small">Les données restent enregistrées localement, même sans réseau. La synchronisation cloud reprend au retour de la connexion.</p></div><div class="card"><h3>Version</h3><p>Audit Ovin GDS 32-65 – v${APP_VERSION} Supabase</p><p class="small">Version autonome sans base métier ni import CSV.</p></div>`}
+function renderBackup(){let c=cloudCfg();backup.innerHTML=`<div class="card"><h2>Supabase / synchronisation</h2><div class="grid"><div class="field"><label>URL Supabase</label><input id="supaUrl" value="${esc(c.url)}"></div><div class="field"><label>Clé publique Supabase</label><input id="supaKey" type="password" value="${esc(c.key)}" placeholder="sb_publishable_... ou anon key"></div></div><div class="actions"><button class="btn" onclick="saveCloudConfig()">Enregistrer Supabase</button><button class="btn alt" onclick="testCloud()">Tester la connexion</button><button class="btn alt" onclick="cloudBackup(true)">Synchroniser maintenant</button><button class="btn alt" onclick="cloudRestore()">Restaurer depuis le cloud</button></div><p class="small">Projet préconfiguré : ${esc(DEFAULT_SUPABASE_URL)}. Les données Ovin utilisent uniquement la table <b>ovin_backups</b>. Les comptes et rôles proviennent de la table <b>profiles</b> commune avec les autres applications.</p></div><div class="card"><h2>Sauvegarde de secours</h2><div class="actions"><button class="btn" onclick="downloadAll()">Télécharger la sauvegarde complète</button><label class="btn alt">Restaurer JSON<input class="hidden" type="file" accept="application/json" onchange="restoreFile(this.files[0])"></label><button class="btn danger" onclick="if(confirm('Tout effacer sur cet appareil ?')){localStorage.removeItem(APP);location.reload()}">Effacer les données locales</button></div><p class="small">Les données restent enregistrées localement, même sans réseau. La synchronisation cloud reprend au retour de la connexion.</p></div><div class="card"><h3>Version</h3><p>Audit Ovin GDS 32-65 – v${APP_VERSION} Supabase</p><p class="small">Version autonome sans base métier ni import CSV.</p></div>`}
 function download(name,obj){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
 function downloadAll(){download(`Audit_Ovin_sauvegarde_${new Date().toISOString().slice(0,10)}.json`,db)}function exportVisit(){let v=activeVisit();download(`Audit_Ovin_${v.date}.json`,{farm:activeFarm(),visit:v,subjects:db.subjects.filter(s=>s.visitId===v.id)})}
 function restoreFile(file){let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);save()}catch(e){alert('Fichier invalide')}};r.readAsText(file)}
-initTabs();renderAll();{let c=cloudCfg();setCloudStatus(c.key?'☁️ Prêt à synchroniser':'☁️ Supabase à configurer')}if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+initTabs();renderAll();{let c=cloudCfg();setCloudStatus(c.key?'☁️ Connexion requise':'☁️ Supabase à configurer')}initAuth();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 </script>
 </body></html>
