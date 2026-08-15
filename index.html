@@ -3,7 +3,16 @@
 <head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Audit Ovin GDS 32-65</title>
-<link rel="manifest" href="manifest.webmanifest"><link rel="icon" type="image/png" sizes="192x192" href="icon-192.png"><link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png"><meta name="theme-color" content="#315b47">
+<link rel="manifest" href="manifest.webmanifest?v=1.6">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png?v=1.6">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png?v=1.6">
+<link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=1.6">
+<meta name="theme-color" content="#315b47">
+<meta name="application-name" content="Audit Ovin">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Audit Ovin">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <style>
 :root{--g:#315b47;--g2:#e8f2ed;--bg:#f5f6f4;--card:#fff;--txt:#1f2b25;--muted:#65736b;--line:#d8dfdb;--ok:#dff3e4;--warn:#fff1c7;--bad:#f8d7da;--blue:#e6efff}
 *{box-sizing:border-box}body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--txt)}header{position:sticky;top:0;z-index:5;background:var(--g);color:white;padding:14px 16px;box-shadow:0 2px 8px #0002}.brand{font-size:19px;font-weight:800}.sub{font-size:12px;opacity:.9}.wrap{max-width:1100px;margin:auto;padding:12px}.tabs{display:flex;gap:7px;overflow:auto;padding-bottom:8px}.tabs button{white-space:nowrap;border:0;border-radius:999px;padding:10px 14px;background:white;color:var(--g);font-weight:700;box-shadow:0 1px 4px #0001}.tabs button.active{background:var(--g);color:white}.panel{display:none}.panel.active{display:block}.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin:10px 0;box-shadow:0 2px 7px #0000000b}.card h2,.card h3{margin:0 0 10px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}.field label{font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:4px}.field input,.field select,.field textarea{width:100%;border:1px solid #bdc8c1;border-radius:9px;padding:10px;background:#fff;font-size:15px}.field textarea{min-height:76px}.actions{display:flex;flex-wrap:wrap;gap:8px}.btn{border:0;border-radius:10px;padding:10px 13px;background:var(--g);color:white;font-weight:750}.btn.alt{background:#edf2ef;color:var(--g);border:1px solid #b9c8c0}.btn.danger{background:#9b2f35}.badge{display:inline-block;border-radius:999px;padding:4px 8px;font-size:12px;font-weight:800}.ok{background:var(--ok);color:#17622c}.warn{background:var(--warn);color:#795b00}.bad{background:var(--bad);color:#8a2630}.info{background:var(--blue);color:#285596}.subject{border-left:5px solid var(--g);padding-left:12px}.measure-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:8px}.measure{border:1px solid var(--line);border-radius:10px;padding:8px}.measure label{display:block;font-size:12px;font-weight:700;color:var(--muted)}.measure input,.measure select{width:100%;margin-top:4px;border:1px solid #c6cec9;border-radius:8px;padding:8px}.result{margin-top:5px;font-size:12px}.list-item{border-bottom:1px solid var(--line);padding:10px 0}.list-item:last-child{border:0}.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.kpi{background:var(--g2);border-radius:12px;padding:10px;text-align:center}.kpi b{display:block;font-size:22px}.small{font-size:12px;color:var(--muted)}.notice{background:#fff7dc;border:1px solid #eed28a;border-radius:12px;padding:10px}.hidden{display:none}@media(max-width:620px){.wrap{padding:8px}.card{padding:11px}.kpis{grid-template-columns:1fr}.measure-grid{grid-template-columns:repeat(2,1fr)}}@media print{header,.tabs,.no-print{display:none!important}.panel{display:block!important}.card{break-inside:avoid;box-shadow:none}}
@@ -65,6 +74,13 @@ header{padding-top:max(14px,env(safe-area-inset-top))}
   .tabs button{padding:9px 11px;font-size:13px}
 }
 
+
+.version-badge{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;background:#ffffff26;border:1px solid #ffffff55;font-size:11px;vertical-align:middle;font-weight:800}
+.install-help{position:fixed;inset:0;z-index:120;background:#0008;display:flex;align-items:center;justify-content:center;padding:18px}
+.install-help.hidden{display:none}
+.install-help-box{max-width:430px;background:#fff;border-radius:16px;padding:18px;color:#1f2b25;box-shadow:0 18px 60px #0007}
+.install-help-box h3{margin-top:0}
+.install-help-box .actions{justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -83,10 +99,11 @@ header{padding-top:max(14px,env(safe-area-inset-top))}
     </details>
   </div>
 </div>
+<div id="installHelp" class="install-help hidden"><div class="install-help-box"><h3>Installer Audit Ovin</h3><div id="installHelpText">Chrome prépare l’installation…</div><div class="actions" style="margin-top:14px"><button class="btn alt" onclick="document.getElementById('installHelp').classList.add('hidden')">Fermer</button></div></div></div>
 <header>
   <div class="header-row">
-    <div><div class="brand">🐑 Audit Ovin GDS 32-65</div><div class="sub" id="activeVisit">Aucune visite active</div><div class="sub" id="cloudStatus">☁️ Supabase à configurer</div></div>
-    <div id="userBox" class="header-user hidden"><button id="workModeBtn" onclick="toggleWorkMode()">📱 Terrain</button><span id="userBadge"></span><button onclick="signOut()">Déconnexion</button></div>
+    <div><div class="brand">🐑 Audit Ovin GDS 32-65 <span id="appVersionBadge" class="version-badge">v1.6</span></div><div class="sub" id="activeVisit">Aucune visite active</div><div class="sub" id="cloudStatus">☁️ Supabase à configurer</div></div>
+    <div id="userBox" class="header-user hidden"><button id="installAppBtn" class="hidden" onclick="installApp()">⬇ Installer</button><button id="workModeBtn" onclick="toggleWorkMode()">📱 Terrain</button><span id="userBadge"></span><button onclick="signOut()">Déconnexion</button></div>
   </div>
 </header>
 <div class="wrap">
@@ -107,7 +124,7 @@ header{padding-top:max(14px,env(safe-area-inset-top))}
 </div>
 <script>
 const APP='auditOvinGDS_v1';
-const APP_VERSION='1.5';
+const APP_VERSION='1.6';
 const DEFAULT_SUPABASE_URL='https://ckylznynqsefqkmtjcjf.supabase.co';
 const CLOUD_ID='audit-ovin-main';
 let cloudTimer=null, cloudBusy=false, cloudPending=false, renderPending=false;
@@ -339,10 +356,37 @@ function applyReviewDeepLink(){
 }
 
 function renderReport(){let v=activeVisit(),f=activeFarm();if(!v){report.innerHTML='<div class="card">Ouvrez une visite.</div>';return}let ss=db.subjects.filter(s=>s.visitId===v.id),fs=getFindings();report.innerHTML=`<div class="card"><h2>Compte rendu – Audit Ovin</h2><p><b>${esc(f?.name||'')}</b><br>${esc(f?.owner||'')} • EDE ${esc(f?.ede||'')} • ${esc(f?.commune||'')}<br>Visite du ${v.date} – ${esc(v.type)} – ${esc(v.tech||'')}</p></div><div class="card"><h3>Sujets / lots observés</h3>${ss.map(s=>`<div>${esc(s.name)} — ${esc(s.stage)} — effectif ${s.count||1}</div>`).join('')||'Aucun'}</div><div class="card"><h3>Points à approfondir</h3>${fs.map(x=>`<div>• ${esc(x.text)}</div>`).join('')||'Aucun écart automatique détecté.'}</div><div class="card"><h3>Plan d’action</h3>${v.actions.map(a=>`<div>• <b>${esc(a.theme)}</b> – ${esc(a.text)} (${esc(a.priority)})</div>`).join('')||'Aucune action.'}</div><div class="card"><h3>Conclusion technicien</h3><textarea oninput="activeVisit().conclusion=this.value;saveLocalOnly()" onblur="finishEditing()">${esc(v.conclusion||'')}</textarea></div>${v.review?.validatedAt?`<div class="card"><h3>Relecture collègue</h3><p><b>${esc(v.review.reviewer||'Collègue')}</b> — relecture terminée.</p><p>${esc(v.review.general||'Aucune remarque générale.')}</p></div>`:''}<div class="actions no-print"><button class="btn" onclick="window.print()">Imprimer / PDF</button><button class="btn alt" onclick="exportVisit()">Exporter la visite JSON</button></div>`}
-function renderBackup(){let c=cloudCfg();backup.innerHTML=`<div class="card"><h2>Supabase / synchronisation</h2><div class="grid"><div class="field"><label>URL Supabase</label><input id="supaUrl" value="${esc(c.url)}"></div><div class="field"><label>Clé publique Supabase</label><input id="supaKey" type="password" value="${esc(c.key)}" placeholder="sb_publishable_... ou anon key"></div></div><div class="actions"><button class="btn" onclick="saveCloudConfig()">Enregistrer Supabase</button><button class="btn alt" onclick="testCloud()">Tester la connexion</button><button class="btn alt" onclick="cloudBackup(true)">Synchroniser maintenant</button><button class="btn alt" onclick="cloudRestore()">Restaurer depuis le cloud</button></div><p class="small">Projet préconfiguré : ${esc(DEFAULT_SUPABASE_URL)}. Les données Ovin utilisent uniquement la table <b>ovin_backups</b>. Les comptes et rôles proviennent de la table <b>profiles</b> commune avec les autres applications.</p></div><div class="card"><h2>Sauvegarde de secours</h2><div class="actions"><button class="btn" onclick="downloadAll()">Télécharger la sauvegarde complète</button><label class="btn alt">Restaurer JSON<input class="hidden" type="file" accept="application/json" onchange="restoreFile(this.files[0])"></label><button class="btn danger" onclick="if(confirm('Tout effacer sur cet appareil ?')){localStorage.removeItem(APP);location.reload()}">Effacer les données locales</button></div><p class="small">Les données restent enregistrées localement, même sans réseau. La synchronisation cloud reprend au retour de la connexion.</p></div><div class="card"><h3>Version</h3><p>Audit Ovin GDS 32-65 – v${APP_VERSION} Supabase</p><p class="small">Version autonome sans base métier ni import CSV. Icône installable et suppression des visites ajoutées en v1.5. Correctifs ergonomie/synchronisation/relecture portés depuis Audit Bovin v14.6.21.16.</p></div>`}
+function renderBackup(){let c=cloudCfg();backup.innerHTML=`<div class="card"><h2>Supabase / synchronisation</h2><div class="grid"><div class="field"><label>URL Supabase</label><input id="supaUrl" value="${esc(c.url)}"></div><div class="field"><label>Clé publique Supabase</label><input id="supaKey" type="password" value="${esc(c.key)}" placeholder="sb_publishable_... ou anon key"></div></div><div class="actions"><button class="btn" onclick="saveCloudConfig()">Enregistrer Supabase</button><button class="btn alt" onclick="testCloud()">Tester la connexion</button><button class="btn alt" onclick="cloudBackup(true)">Synchroniser maintenant</button><button class="btn alt" onclick="cloudRestore()">Restaurer depuis le cloud</button></div><p class="small">Projet préconfiguré : ${esc(DEFAULT_SUPABASE_URL)}. Les données Ovin utilisent uniquement la table <b>ovin_backups</b>. Les comptes et rôles proviennent de la table <b>profiles</b> commune avec les autres applications.</p></div><div class="card"><h2>Sauvegarde de secours</h2><div class="actions"><button class="btn" onclick="downloadAll()">Télécharger la sauvegarde complète</button><label class="btn alt">Restaurer JSON<input class="hidden" type="file" accept="application/json" onchange="restoreFile(this.files[0])"></label><button class="btn danger" onclick="if(confirm('Tout effacer sur cet appareil ?')){localStorage.removeItem(APP);location.reload()}">Effacer les données locales</button></div><p class="small">Les données restent enregistrées localement, même sans réseau. La synchronisation cloud reprend au retour de la connexion.</p></div><div class="card"><h3>Version</h3><p>Audit Ovin GDS 32-65 – v${APP_VERSION} Supabase</p><p class="small">Version autonome sans base métier ni import CSV. Icône installable et suppression des visites ajoutées en v1.5. PWA renforcée, cache forcé et version visible en v1.6. Correctifs ergonomie/synchronisation/relecture portés depuis Audit Bovin v14.6.21.16.</p></div>`}
 function download(name,obj){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
 function downloadAll(){download(`Audit_Ovin_sauvegarde_${new Date().toISOString().slice(0,10)}.json`,db)}function exportVisit(){let v=activeVisit();download(`Audit_Ovin_${v.date}.json`,{farm:activeFarm(),visit:v,subjects:db.subjects.filter(s=>s.visitId===v.id)})}
 function restoreFile(file){let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);save()}catch(e){alert('Fichier invalide')}};r.readAsText(file)}
+
+
+let deferredInstallPrompt=null;
+function isStandalone(){return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone===true}
+function refreshInstallButton(){
+  const b=document.getElementById('installAppBtn');if(!b)return;
+  if(isStandalone()){b.classList.add('hidden');return}
+  if(deferredInstallPrompt){b.classList.remove('hidden');b.textContent='⬇ Installer'}
+  else {b.classList.remove('hidden');b.textContent='⬇ Installation'}
+}
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredInstallPrompt=e;refreshInstallButton();
+});
+window.addEventListener('appinstalled',()=>{deferredInstallPrompt=null;refreshInstallButton();});
+async function installApp(){
+  if(isStandalone())return;
+  if(deferredInstallPrompt){
+    deferredInstallPrompt.prompt();
+    try{await deferredInstallPrompt.userChoice}catch(e){}
+    deferredInstallPrompt=null;refreshInstallButton();return;
+  }
+  const box=document.getElementById('installHelp'),txt=document.getElementById('installHelpText');
+  if(box&&txt){
+    txt.innerHTML='<p>Chrome ne propose pas encore l’installation pour cette page.</p><p><b>À faire une seule fois :</b> ferme complètement cet onglet, rouvre Audit Ovin depuis Chrome, puis actualise la page. Le bouton passera automatiquement à <b>⬇ Installer</b> dès que Chrome reconnaît l’application.</p><p>Si le menu Chrome affiche seulement « créer un raccourci », ne le choisis pas : ce serait à nouveau un simple raccourci avec le logo Chrome.</p>';
+    box.classList.remove('hidden');
+  }
+}
 
 function applyWorkMode(mode){
   const terrain=mode==='terrain';
@@ -377,6 +421,6 @@ document.addEventListener('keydown',e=>{
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){localStorage.setItem(APP,JSON.stringify(db));}});
 window.addEventListener('pagehide',()=>{localStorage.setItem(APP,JSON.stringify(db));});
 
-initTabs();renderAll();applyWorkMode(localStorage.getItem('auditOvin.workMode')||'bureau');initKeyboardDismissButton();applyReviewDeepLink();{let c=cloudCfg();setCloudStatus(c.key?'☁️ Connexion requise':'☁️ Supabase à configurer')}initAuth();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=1.5',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
+initTabs();renderAll();applyWorkMode(localStorage.getItem('auditOvin.workMode')||'bureau');initKeyboardDismissButton();applyReviewDeepLink();{let c=cloudCfg();setCloudStatus(c.key?'☁️ Connexion requise':'☁️ Supabase à configurer')}initAuth();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=1.6',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});refreshInstallButton();
 </script>
 </body></html>

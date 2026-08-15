@@ -1,0 +1,8 @@
+AUDIT OVIN GDS 32-65 — v1.6
+
+- Numéro de version visible dans l'en-tête.
+- Manifeste PWA enrichi (id, description, orientation, display_override).
+- Manifeste et icônes cache-bustés pour éviter qu'Android conserve l'ancien raccourci.
+- Service worker v1.6 en réseau-prioritaire et activation immédiate.
+- Bouton Installation/Installer dans l'en-tête.
+- Aucun nouveau SQL nécessaire.
