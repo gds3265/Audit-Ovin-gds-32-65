@@ -1,0 +1,32 @@
+AUDIT OVIN GDS 32-65 — v1.4
+Portage des correctifs communs de l'Audit Bovin v14.6.21.16.
+
+APPLIQUÉ À L'OVIN
+- saisie locale immédiate des mesures ;
+- la synchronisation Supabase ne recharge plus l'écran pendant une saisie active ;
+- synchronisation différée puis reprise après fermeture du clavier ;
+- Entrée = case de mesure suivante ;
+- virgule et point acceptés dans les mesures ;
+- champs décimaux adaptés aux claviers mobiles ;
+- bouton flottant « Clavier » ;
+- affichage mobile/tablette plus compact ;
+- identité du sujet/lot maintenue visible en haut de sa carte de mesures ;
+- mode Terrain / Bureau ;
+- Analyse & interprétation déplacée vers la fin du bandeau ;
+- interprétations regroupées pour éviter les doublons ;
+- bouton « Ouvrir l'analyse détaillée » corrigé et dirigé vers le bon contenu ;
+- module Relecture collègue avec validation par thème, remarques, synthèse et lien direct ;
+- sauvegarde locale forcée à la mise en arrière-plan / fermeture de page ;
+- cache Service Worker versionné pour forcer la mise à jour.
+
+VOLONTAIREMENT NON COPIÉ
+- import CSV / base métier bovine ;
+- reproduction bovine, IVV, vêlages, primipares, génisses, etc. ;
+- fonctions dépendant du registre bovins ;
+- éléments spécifiques aux rapports bovins.
+
+CONSERVÉ
+- mêmes comptes Supabase que l'Audit Bovin ;
+- données Ovin séparées dans public.ovin_backups ;
+- fonctionnement autonome sans base métier ;
+- reproduction Ovin seulement sous forme d'indicateurs synthétiques facultatifs.

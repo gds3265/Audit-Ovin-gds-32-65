@@ -21,6 +21,50 @@
 .header-user{font-size:12px;opacity:.92;display:flex;gap:7px;align-items:center}
 .header-user button{border:1px solid #ffffff66;background:#ffffff18;color:#fff;border-radius:8px;padding:5px 8px;font-weight:700}
 
+
+/* v1.4 — ergonomie alignée sur les correctifs Audit Bovin récents */
+body{padding-bottom:env(safe-area-inset-bottom)}
+header{padding-top:max(14px,env(safe-area-inset-top))}
+.keyboard-dismiss{display:none;position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:90;border:0;border-radius:999px;padding:9px 13px;background:#1f2b25;color:#fff;font-weight:800;box-shadow:0 5px 18px #0004}
+.keyboard-dismiss.visible{display:inline-flex;align-items:center;gap:6px}
+.editing-cloud{opacity:.8}
+.compact-subject-head{display:flex;align-items:center;justify-content:space-between;gap:8px;position:sticky;top:78px;z-index:3;background:#fff;padding:6px 0 8px;border-bottom:1px solid var(--line)}
+.compact-subject-head .small{white-space:normal}
+.measure input{font-variant-numeric:tabular-nums}
+.measure input:focus,.field input:focus,.field textarea:focus,.field select:focus{outline:2px solid #315b4744;border-color:var(--g)}
+.review-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.review-theme{border:1px solid var(--line);border-radius:12px;padding:11px;background:#fff}
+.review-theme h4{margin:0 0 8px}
+.review-theme textarea{width:100%;min-height:70px;border:1px solid #bdc8c1;border-radius:9px;padding:9px}
+.review-theme select{width:100%;border:1px solid #bdc8c1;border-radius:9px;padding:9px;background:#fff}
+.interp-group{border-left:5px solid var(--g);padding:10px 12px;margin:10px 0;background:#f8fbf9;border-radius:0 10px 10px 0}
+.interp-group h4{margin:0 0 6px}
+.deep-analysis{scroll-margin-top:90px}
+.terrain-mode .panel .card{box-shadow:none}
+.terrain-mode .tabs button[data-tab="farm"],
+.terrain-mode .tabs button[data-tab="backup"]{display:none}
+.terrain-mode .wrap{max-width:100%}
+@media(min-width:700px){
+  .field-grid-compact{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+}
+@media(max-width:700px){
+  header{padding-left:10px;padding-right:10px}
+  .header-row{align-items:flex-start}
+  .header-user{flex-wrap:wrap;justify-content:flex-end}
+  .header-user #userBadge{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .tabs{position:sticky;top:0;z-index:4;background:var(--bg);padding-top:6px}
+  .compact-subject-head{top:54px}
+  .measure-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+  .measure{padding:6px}
+  .measure input{padding:9px 6px;font-size:16px}
+  .field input,.field select,.field textarea{font-size:16px}
+}
+@media(max-width:420px){
+  .measure-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .card{border-radius:10px}
+  .tabs button{padding:9px 11px;font-size:13px}
+}
+
 </style>
 </head>
 <body>
@@ -42,7 +86,7 @@
 <header>
   <div class="header-row">
     <div><div class="brand">🐑 Audit Ovin GDS 32-65</div><div class="sub" id="activeVisit">Aucune visite active</div><div class="sub" id="cloudStatus">☁️ Supabase à configurer</div></div>
-    <div id="userBox" class="header-user hidden"><span id="userBadge"></span><button onclick="signOut()">Déconnexion</button></div>
+    <div id="userBox" class="header-user hidden"><button id="workModeBtn" onclick="toggleWorkMode()">📱 Terrain</button><span id="userBadge"></span><button onclick="signOut()">Déconnexion</button></div>
   </div>
 </header>
 <div class="wrap">
@@ -55,17 +99,18 @@
 <section id="flock" class="panel"></section>
 <section id="feed" class="panel"></section>
 <section id="building" class="panel"></section>
-<section id="analysis" class="panel"></section>
 <section id="actions" class="panel"></section>
+<section id="analysis" class="panel"></section>
+<section id="review" class="panel"></section>
 <section id="report" class="panel"></section>
 <section id="backup" class="panel"></section>
 </div>
 <script>
 const APP='auditOvinGDS_v1';
-const APP_VERSION='1.3';
+const APP_VERSION='1.4';
 const DEFAULT_SUPABASE_URL='https://ckylznynqsefqkmtjcjf.supabase.co';
 const CLOUD_ID='audit-ovin-main';
-let cloudTimer=null, cloudBusy=false;
+let cloudTimer=null, cloudBusy=false, cloudPending=false, renderPending=false;
 let authSession=JSON.parse(localStorage.getItem('auditOvin.authSession')||'null');
 let currentProfile=null;
 function cloudCfg(){return {url:(localStorage.getItem('auditOvin.supabaseUrl')||localStorage.getItem('parage.supabaseUrl')||DEFAULT_SUPABASE_URL).replace(/\/rest\/v1\/?$/,'').replace(/\/$/,''),key:localStorage.getItem('auditOvin.supabaseKey')||localStorage.getItem('parage.supabaseKey')||''}}
@@ -115,6 +160,7 @@ async function signOut(){
   authSession=null;currentProfile=null;localStorage.removeItem('auditOvin.authSession');location.reload();
 }
 async function cloudRestoreSilent(){
+  if(isEditableActive()){cloudPending=true;return}
   try{
     let r=await supa('ovin_backups?id=eq.'+encodeURIComponent(CLOUD_ID)+'&select=payload,updated_at',{method:'GET'});
     if(!r.ok)return;let rows=await r.json();
@@ -133,12 +179,25 @@ async function initAuth(){
     }
   }
 }
-function scheduleCloudSync(){clearTimeout(cloudTimer);cloudTimer=setTimeout(()=>cloudBackup(false),1200)}
-async function cloudBackup(showMessage=true){if(cloudBusy)return false;let c=cloudCfg();if(!c.key){setCloudStatus('☁️ Supabase à configurer');if(showMessage)alert('Renseignez la clé publique Supabase dans Sauvegarde.');return false}cloudBusy=true;setCloudStatus('☁️ Synchronisation…');try{let payload={id:CLOUD_ID,payload:db,updated_at:new Date().toISOString()};let r=await supa('ovin_backups?on_conflict=id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});if(!r.ok)throw new Error(await r.text());localStorage.setItem('auditOvin.lastSync',new Date().toISOString());setCloudStatus('☁️ Cloud à jour');if(showMessage)alert('Sauvegarde Supabase effectuée.');return true}catch(e){console.error(e);setCloudStatus('☁️ En attente d’envoi');if(showMessage)alert('Synchronisation impossible : '+e.message);return false}finally{cloudBusy=false}}
+function isEditableActive(){
+  const e=document.activeElement;
+  return !!(e && e.matches && e.matches('input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=button]):not([type=submit]),textarea,select'));
+}
+function scheduleCloudSync(){
+  clearTimeout(cloudTimer);
+  cloudTimer=setTimeout(()=>{
+    if(isEditableActive()){cloudPending=true;setCloudStatus('☁️ Saisie locale • synchro en attente');return}
+    cloudBackup(false);
+  },1200);
+}
+function flushPendingCloud(){
+  if(cloudPending && !isEditableActive()){cloudPending=false;cloudBackup(false)}
+}
+async function cloudBackup(showMessage=true){if(isEditableActive()&&!showMessage){cloudPending=true;setCloudStatus('☁️ Saisie locale • synchro en attente');return false}if(cloudBusy)return false;let c=cloudCfg();if(!c.key){setCloudStatus('☁️ Supabase à configurer');if(showMessage)alert('Renseignez la clé publique Supabase dans Sauvegarde.');return false}cloudBusy=true;setCloudStatus('☁️ Synchronisation…');try{let payload={id:CLOUD_ID,payload:db,updated_at:new Date().toISOString()};let r=await supa('ovin_backups?on_conflict=id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});if(!r.ok)throw new Error(await r.text());localStorage.setItem('auditOvin.lastSync',new Date().toISOString());setCloudStatus('☁️ Cloud à jour');if(showMessage)alert('Sauvegarde Supabase effectuée.');return true}catch(e){console.error(e);setCloudStatus('☁️ En attente d’envoi');if(showMessage)alert('Synchronisation impossible : '+e.message);return false}finally{cloudBusy=false}}
 async function cloudRestore(){let c=cloudCfg();if(!c.key)return alert('Renseignez d’abord la clé publique Supabase.');if(!confirm('Restaurer les données Ovin depuis Supabase ? Les données locales seront remplacées par la sauvegarde cloud.'))return;setCloudStatus('☁️ Restauration…');try{let r=await supa('ovin_backups?id=eq.'+encodeURIComponent(CLOUD_ID)+'&select=payload,updated_at',{method:'GET'});if(!r.ok)throw new Error(await r.text());let rows=await r.json();if(!rows.length)return alert('Aucune sauvegarde Ovin trouvée dans Supabase.');db=rows[0].payload;localStorage.setItem(APP,JSON.stringify(db));renderAll();setCloudStatus('☁️ Cloud restauré');alert('Restauration terminée.')}catch(e){setCloudStatus('☁️ Erreur cloud');alert('Restauration impossible : '+e.message)}}
 function saveCloudConfig(){let u=(document.getElementById('supaUrl').value||'').trim().replace(/\/rest\/v1\/?$/,'').replace(/\/$/,'');let k=(document.getElementById('supaKey').value||'').trim();localStorage.setItem('auditOvin.supabaseUrl',u||DEFAULT_SUPABASE_URL);localStorage.setItem('auditOvin.supabaseKey',k);if(document.getElementById('loginSupaUrl'))document.getElementById('loginSupaUrl').value=u||DEFAULT_SUPABASE_URL;if(document.getElementById('loginSupaKey'))document.getElementById('loginSupaKey').value=k;renderBackup();if(k){setCloudStatus('☁️ Prêt à synchroniser');cloudBackup(false)}else setCloudStatus('☁️ Supabase à configurer')}
 async function testCloud(){let c=cloudCfg();if(!c.key)return alert('Renseignez la clé publique Supabase.');try{let r=await supa('ovin_backups?select=id&limit=1',{method:'GET'});if(!r.ok)throw new Error(await r.text());setCloudStatus('☁️ Connexion Supabase OK');alert('Connexion Supabase Ovin OK.')}catch(e){setCloudStatus('☁️ Erreur Supabase');alert('Connexion impossible : '+e.message)}}
-const tabs=[['home','Accueil'],['farm','Exploitation'],['visits','Visites'],['subjects','Sujets / lots'],['measurements','Mesures'],['flock','Audit troupeau'],['feed','Alimentation'],['building','Bâtiment / eau'],['analysis','Analyse'],['actions','Plan d’action'],['report','Rapport'],['backup','Sauvegarde']];
+const tabs=[['home','Accueil'],['farm','Exploitation'],['visits','Visites'],['subjects','Sujets / lots'],['measurements','Mesures'],['flock','Audit troupeau'],['feed','Alimentation'],['building','Bâtiment / eau'],['actions','Plan d’action'],['analysis','Analyse & interprétation'],['review','Relecture collègue'],['report','Rapport'],['backup','Sauvegarde']];
 const stages=['Brebis en lactation','Brebis taries','Préparation mise-bas','Agneaux naissance','Agneaux J+1'];
 const refs={
 'Brebis en lactation':{nec:[2.5,2.75],muscle:[1.5,2],srr:[3.5,4],urineColor:[1,2],urinePH:[7.8,8.3],urineRedox:[-20,20],urineBrix:[3,5],urineDensity:[1015,1030],gly:[58,75],boh:[0,0.7],bloodPH:[7.34,7.45],fecesPH:[6.5,6.8],fecesRedox:[-200,-180],temp:[39.5,40]},
@@ -149,25 +208,59 @@ const refs={
 };
 const measureLabels={nec:'NEC',muscle:'Muscle',srr:'SRR',limbs:'Membres',urineColor:'Couleur urine',urinePH:'pH urine',urineRedox:'Redox urine',urineBrix:'Brix urine (%)',urineDensity:'Densité urine',gly:'Glycémie',boh:'BOH',bloodPH:'pH sang',urea:'Urémie',protein:'Protéines totales',fecesPH:'pH selles',fecesRedox:'Redox selles',temp:'Température'};
 let db=JSON.parse(localStorage.getItem(APP)||'{"farms":[],"visits":[],"subjects":[],"activeVisitId":null}');
-const save=()=>{localStorage.setItem(APP,JSON.stringify(db));renderAll();scheduleCloudSync()};
+function saveLocalOnly(){
+  localStorage.setItem(APP,JSON.stringify(db));
+  scheduleCloudSync();
+}
+function save(render=true){
+  localStorage.setItem(APP,JSON.stringify(db));
+  scheduleCloudSync();
+  if(render && !isEditableActive()) renderAll();
+  else if(render) renderPending=true;
+}
+function finishEditing(){
+  if(renderPending){renderPending=false;renderAll()}
+  flushPendingCloud();
+}
 const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const activeVisit=()=>db.visits.find(v=>v.id===db.activeVisitId);
 const activeFarm=()=>{let v=activeVisit();return v&&db.farms.find(f=>f.id===v.farmId)};
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function initTabs(){tabs.forEach(([k,l])=>{let b=document.createElement('button');b.textContent=l;b.onclick=()=>show(k);b.dataset.tab=k;document.querySelector('#tabs').appendChild(b)});show('home')}
 function show(k){document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===k));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===k));window.scrollTo(0,0)}
-function renderAll(){let v=activeVisit(),f=activeFarm();document.querySelector('#activeVisit').textContent=v?`${f?.name||''} • ${v.date} • ${v.type}`:'Aucune visite active';renderHome();renderFarm();renderVisits();renderSubjects();renderMeasurements();renderFlock();renderFeed();renderBuilding();renderAnalysis();renderActions();renderReport();renderBackup()}
+function renderAll(){let v=activeVisit(),f=activeFarm();document.querySelector('#activeVisit').textContent=v?`${f?.name||''} • ${v.date} • ${v.type}`:'Aucune visite active';renderHome();renderFarm();renderVisits();renderSubjects();renderMeasurements();renderFlock();renderFeed();renderBuilding();renderActions();renderAnalysis();renderReview();renderReport();renderBackup()}
 function renderHome(){let v=activeVisit(), subs=v?db.subjects.filter(s=>s.visitId===v.id):[];home.innerHTML=`<div class="card"><h2>Audit ovin de terrain</h2><p>Application autonome de terrain : aucune base métier ni aucun fichier d'import n'est nécessaire. Les exploitations, lots et sujets sont saisis directement dans l'application.</p><div class="kpis"><div class="kpi"><b>${db.farms.length}</b><span>exploitations</span></div><div class="kpi"><b>${db.visits.length}</b><span>visites</span></div><div class="kpi"><b>${subs.length}</b><span>sujets / lots actifs</span></div></div></div><div class="card notice"><b>Fonctionnement Ovin</b><br>Pas de base métier, pas d'import CSV et pas de module de reproduction détaillé. Saisir l'exploitation, créer la visite, puis ajouter uniquement les lots ou animaux réellement observés.</div><div class="card notice"><b>Ordre conseillé</b><br>Exploitation → Visite → Sujets/lots → Mesures → Audit troupeau → Analyse → Plan d’action → Rapport.</div><div class="card"><h3>Types de visite</h3><div class="grid"><div>• Bilan troupeau</div><div>• Préparation agnelage</div><div>• Suivi agneaux</div><div>• Diagnostic sanitaire</div><div>• Alimentation</div><div>• Bâtiment et eau</div></div></div>`}
 function renderFarm(){farm.innerHTML=`<div class="card"><h2>Nouvelle exploitation</h2><div class="grid"><div class="field"><label>Nom exploitation</label><input id="fn"></div><div class="field"><label>Éleveur</label><input id="fo"></div><div class="field"><label>N° EDE</label><input id="fede"></div><div class="field"><label>Commune</label><input id="fc"></div><div class="field"><label>Type</label><select id="ft"><option>Ovin allaitant</option><option>Ovin laitier</option><option>Mixte</option></select></div><div class="field"><label>Conduite</label><select id="fcond"><option>Bergerie</option><option>Plein air</option><option>Mixte</option><option>Transhumance</option></select></div></div><div class="field"><label>Informations permanentes</label><textarea id="fnotes"></textarea></div><button class="btn" onclick="addFarm()">Enregistrer</button></div><div class="card"><h3>Exploitations</h3>${db.farms.map(f=>`<div class="list-item"><b>${esc(f.name)}</b> <span class="small">${esc(f.ede||'')} • ${esc(f.type)}</span><br><span class="small">${esc(f.owner||'')} – ${esc(f.commune||'')}</span></div>`).join('')||'<span class="small">Aucune exploitation.</span>'}</div>`}
 function addFarm(){if(!fn.value.trim())return alert('Nom obligatoire');db.farms.push({id:id(),name:fn.value.trim(),owner:fo.value,ede:fede.value,commune:fc.value,type:ft.value,conduct:fcond.value,notes:fnotes.value});save()}
 function renderVisits(){visits.innerHTML=`<div class="card"><h2>Créer une visite</h2><div class="grid"><div class="field"><label>Exploitation</label><select id="vf">${db.farms.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('')}</select></div><div class="field"><label>Date</label><input id="vd" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Type</label><select id="vt"><option>Bilan troupeau</option><option>Préparation agnelage</option><option>Suivi agneaux</option><option>Diagnostic sanitaire</option><option>Alimentation</option><option>Bâtiment et eau</option><option>Visite ciblée</option></select></div><div class="field"><label>Technicien</label><input id="vtech"></div></div><button class="btn" onclick="addVisit()">Créer et ouvrir</button></div><div class="card"><h3>Historique</h3>${db.visits.slice().reverse().map(v=>{let f=db.farms.find(x=>x.id===v.farmId);return `<div class="list-item"><b>${esc(f?.name||'')}</b> — ${v.date}<br><span class="small">${esc(v.type)} • ${esc(v.tech||'')}</span><div class="actions"><button class="btn alt" onclick="openVisit('${v.id}')">Ouvrir</button></div></div>`}).join('')||'<span class="small">Aucune visite.</span>'}</div>`}
-function addVisit(){if(!vf.value)return alert('Créer une exploitation');let v={id:id(),farmId:vf.value,date:vd.value,type:vt.value,tech:vtech.value,flock:{},feed:{},building:{},water:{},actions:[],conclusion:''};db.visits.push(v);db.activeVisitId=v.id;save()}
+function addVisit(){if(!vf.value)return alert('Créer une exploitation');let v={id:id(),farmId:vf.value,date:vd.value,type:vt.value,tech:vtech.value,flock:{},feed:{},building:{},water:{},actions:[],conclusion:'',review:{reviewer:'',general:'',validatedAt:'',themes:{}}};db.visits.push(v);db.activeVisitId=v.id;save()}
 function openVisit(x){db.activeVisitId=x;save()}
 function renderSubjects(){let v=activeVisit();if(!v){subjects.innerHTML='<div class="card">Ouvrez une visite.</div>';return}let ss=db.subjects.filter(s=>s.visitId===v.id);subjects.innerHTML=`<div class="card"><h2>Ajouter manuellement un sujet ou un lot</h2><p class="small">Aucun import n'est attendu : vous pouvez saisir un animal repéré individuellement ou un lot représentatif.</p><div class="grid"><div class="field"><label>Identifiant / lot</label><input id="sid"></div><div class="field"><label>Stade</label><select id="sst">${stages.map(x=>`<option>${x}</option>`)}</select></div><div class="field"><label>Âge / jours de lactation</label><input id="sage"></div><div class="field"><label>Effectif représenté</label><input id="scount" type="number" value="1"></div></div><div class="field"><label>Observation</label><textarea id="snote"></textarea></div><button class="btn" onclick="addSubject()">Ajouter</button></div><div class="card"><h3>Sujets et lots</h3>${ss.map(s=>`<div class="list-item subject"><b>${esc(s.name)}</b> <span class="badge info">${esc(s.stage)}</span><br><span class="small">${esc(s.age||'')} • effectif ${s.count||1}</span></div>`).join('')||'<span class="small">Aucun sujet.</span>'}</div>`}
 function addSubject(){if(!sid.value.trim())return alert('Identifiant obligatoire');db.subjects.push({id:id(),visitId:db.activeVisitId,name:sid.value.trim(),stage:sst.value,age:sage.value,count:+scount.value||1,note:snote.value,measures:{},observations:{}});save()}
 function classify(key,val,stage){if(val===''||val==null)return '';let n=Number(String(val).replace(',','.'));if(Number.isNaN(n))return '<span class="badge info">à interpréter</span>';let r=refs[stage]?.[key];if(!r)return '<span class="badge info">sans seuil</span>';if(n<r[0])return '<span class="badge bad">bas</span>';if(n>r[1])return '<span class="badge warn">haut</span>';return '<span class="badge ok">référence</span>'}
-function renderMeasurements(){let v=activeVisit();if(!v){measurements.innerHTML='<div class="card">Ouvrez une visite.</div>';return}let ss=db.subjects.filter(s=>s.visitId===v.id);measurements.innerHTML=`<div class="card"><h2>Mesures individuelles ou par lot</h2><p class="small">La couleur est calculée selon le stade choisi.</p></div>${ss.map(s=>`<div class="card"><h3>${esc(s.name)} <span class="badge info">${esc(s.stage)}</span></h3><div class="measure-grid">${Object.entries(measureLabels).map(([k,l])=>`<div class="measure"><label>${l}</label><input inputmode="decimal" value="${esc(s.measures[k]??'')}" onchange="setMeasure('${s.id}','${k}',this.value)"><div class="result">${classify(k,s.measures[k],s.stage)}</div></div>`).join('')}</div><h4>Observations cliniques</h4><div class="grid">${['Palpation rumen','Selles','Membres / boiterie','Mamelle / trayons','Laine','Muqueuses / FAMACHA','Nombril','Thyroïde / larynx','Cœur / poumons','Réflexe de succion / vitalité'].map(x=>`<div class="field"><label>${x}</label><select onchange="setObs('${s.id}','${x}',this.value)"><option></option><option ${s.observations[x]==='RAS'?'selected':''}>RAS</option><option ${s.observations[x]==='À surveiller'?'selected':''}>À surveiller</option><option ${s.observations[x]==='Anormal'?'selected':''}>Anormal</option><option ${s.observations[x]==='Non évalué'?'selected':''}>Non évalué</option></select></div>`).join('')}</div></div>`).join('')||'<div class="card">Ajoutez au moins un sujet ou lot.</div>'}`}
-function setMeasure(sid,k,v){let s=db.subjects.find(x=>x.id===sid);s.measures[k]=v;save()}function setObs(sid,k,v){let s=db.subjects.find(x=>x.id===sid);s.observations[k]=v;save()}
+function renderMeasurements(){
+  let v=activeVisit();
+  if(!v){measurements.innerHTML='<div class="card">Ouvrez une visite.</div>';return}
+  let ss=db.subjects.filter(s=>s.visitId===v.id);
+  measurements.innerHTML=`<div class="card"><h2>Mesures individuelles ou par lot</h2><p class="small">Saisie locale immédiate. Entrée valide la valeur et passe à la case suivante. Virgule et point sont acceptés.</p></div>${ss.map(s=>`<div class="card measurement-card" data-subject-card="${s.id}"><div class="compact-subject-head"><div><h3 style="margin:0">${esc(s.name)} <span class="badge info">${esc(s.stage)}</span></h3><span class="small">${esc(s.age||'')} • effectif ${s.count||1}</span></div></div><div class="measure-grid">${Object.entries(measureLabels).map(([k,l])=>`<div class="measure"><label>${l}</label><input data-measure-input data-sid="${s.id}" data-key="${k}" type="text" inputmode="decimal" enterkeyhint="next" value="${esc(s.measures[k]??'')}" oninput="setMeasureFast('${s.id}','${k}',this.value)" onblur="finishMeasure('${s.id}','${k}',this.value)"><div class="result" data-result="${s.id}-${k}">${classify(k,s.measures[k],s.stage)}</div></div>`).join('')}</div><h4>Observations cliniques</h4><div class="grid">${['Palpation rumen','Selles','Membres / boiterie','Mamelle / trayons','Laine','Muqueuses / FAMACHA','Nombril','Thyroïde / larynx','Cœur / poumons','Réflexe de succion / vitalité'].map(x=>`<div class="field"><label>${x}</label><select onchange="setObs('${s.id}','${x}',this.value)"><option></option><option ${s.observations[x]==='RAS'?'selected':''}>RAS</option><option ${s.observations[x]==='À surveiller'?'selected':''}>À surveiller</option><option ${s.observations[x]==='Anormal'?'selected':''}>Anormal</option><option ${s.observations[x]==='Non évalué'?'selected':''}>Non évalué</option></select></div>`).join('')}</div></div>`).join('')||'<div class="card">Ajoutez au moins un sujet ou lot.</div>'}`;
+}
+function normalizeDecimal(v){return String(v??'').trim().replace(',','.')}
+function setMeasureFast(sid,k,v){
+  let s=db.subjects.find(x=>x.id===sid);if(!s)return;
+  s.measures[k]=v;
+  localStorage.setItem(APP,JSON.stringify(db));
+  scheduleCloudSync();
+  const r=document.querySelector(`[data-result="${sid}-${k}"]`);
+  if(r)r.innerHTML=classify(k,v,s.stage);
+}
+function finishMeasure(sid,k,v){
+  let s=db.subjects.find(x=>x.id===sid);if(!s)return;
+  s.measures[k]=v;
+  localStorage.setItem(APP,JSON.stringify(db));
+  finishEditing();
+}
+function setMeasure(sid,k,v){setMeasureFast(sid,k,v)}
+function setObs(sid,k,v){let s=db.subjects.find(x=>x.id===sid);s.observations[k]=v;save()}
 const flockFields=[['system','Système de production','select',['Allaitant','Laitier','Mixte']],['breed','Race(s)','text'],['ewes','Nombre de brebis','number'],['eweLambs','Nombre d’agnelles de renouvellement','number'],['rams','Nombre de béliers','number'],['lambs','Nombre d’agneaux présents','number'],['lambing','Période(s) d’agnelage','text'],['fertility','Fertilité (%) si connue','number'],['prolificacy','Prolificité si connue','number'],['mortBirth','Mortalité naissance (%) si connue','number'],['mortWean','Mortalité avant sevrage (%) si connue','number'],['abortions','Avortements / épisodes abortifs','textarea'],['parasites','Parasitisme / coproscopies','textarea'],['feet','Boiteries / parage','textarea'],['mastitis','Mammites / mamelles','textarea'],['biosecurity','Biosécurité / introductions','textarea'],['welfare','Bien-être / contention / prédation','textarea']];
 function renderFormFields(obj,arr,prefix){return arr.map(([k,l,t,opts])=>`<div class="field"><label>${l}</label>${t==='select'?`<select onchange="setVisitObj('${prefix}','${k}',this.value)"><option></option>${opts.map(o=>`<option ${obj[k]===o?'selected':''}>${o}</option>`).join('')}</select>`:t==='textarea'?`<textarea onchange="setVisitObj('${prefix}','${k}',this.value)">${esc(obj[k]||'')}</textarea>`:`<input type="${t}" value="${esc(obj[k]||'')}" onchange="setVisitObj('${prefix}','${k}',this.value)">`}</div>`).join('')}
 function renderFlock(){let v=activeVisit();flock.innerHTML=v?`<div class="card"><h2>Audit troupeau ovin</h2><p class="small">Les données sont saisies manuellement à partir des informations disponibles chez l'éleveur. Les indicateurs de reproduction sont facultatifs et restent volontairement synthétiques.</p><div class="grid">${renderFormFields(v.flock,flockFields,'flock')}</div></div>`:'<div class="card">Ouvrez une visite.</div>'}
@@ -177,15 +270,99 @@ const buildFields=[['housing','Type de logement','text'],['density','Densité / 
 const waterFields=[['source','Origine eau','text'],['mv','Électricité mV','number'],['hardness','Dureté °f','number'],['chlorine','Chloration','number'],['conductivity','Conductivité','number'],['tds','TDS','number'],['salinity','Salinité','number'],['ph','pH','number'],['redox','Redox','number']];
 function renderBuilding(){let v=activeVisit();building.innerHTML=v?`<div class="card"><h2>Bâtiment</h2><div class="grid">${renderFormFields(v.building,buildFields,'building')}</div></div><div class="card"><h2>Eau</h2><div class="grid">${renderFormFields(v.water,waterFields,'water')}</div><div class="notice small">Repères intégrés du fichier : pH conseillé 6–7 ; conductivité &lt;200 ; TDS &lt;500 ; salinité &lt;1000 ; chloration &lt;0,1 ; dureté 5–25 °f.</div></div>`:'<div class="card">Ouvrez une visite.</div>'}
 function setVisitObj(obj,k,val){let v=activeVisit();v[obj][k]=val;save()}
+function setVisitObjFast(obj,k,val){let v=activeVisit();if(!v)return;v[obj][k]=val;saveLocalOnly()}
 function getFindings(){let v=activeVisit();if(!v)return[];let ss=db.subjects.filter(s=>s.visitId===v.id),out=[];ss.forEach(s=>{Object.entries(s.measures).forEach(([k,val])=>{let r=refs[s.stage]?.[k],n=Number(String(val).replace(',','.'));if(r&&!Number.isNaN(n)&&(n<r[0]||n>r[1]))out.push({level:n<r[0]?'bas':'haut',subject:s.name,text:`${measureLabels[k]} ${n<r[0]?'bas':'haut'} (${val}) chez ${s.stage}`})});Object.entries(s.observations).forEach(([k,val])=>{if(val==='Anormal'||val==='À surveiller')out.push({level:val==='Anormal'?'anormal':'surveillance',subject:s.name,text:`${k} : ${val}`})})});if(v.flock.mortBirth>10)out.push({level:'anormal',text:'Mortalité à la naissance élevée : vérifier agnelage, vitalité, hypothermie et prise colostrale.'});if(v.flock.abortions)out.push({level:'surveillance',text:'Avortements renseignés : documenter le taux, les lots, les dates et le protocole diagnostique.'});return out}
-function renderAnalysis(){let fs=getFindings();analysis.innerHTML=`<div class="card"><h2>Analyse automatique</h2><p class="small">Pistes de travail à relire par le technicien ; elles ne constituent pas un diagnostic.</p>${fs.map(x=>`<div class="list-item"><span class="badge ${x.level==='anormal'?'bad':'warn'}">${x.level}</span> ${esc(x.text)}</div>`).join('')||'<div class="badge ok">Aucun écart automatique détecté dans les données saisies.</div>'}</div><div class="card"><h3>Raisonnements ovins à croiser</h3><div class="grid"><div><b>Préparation mise-bas</b><br><span class="small">NEC, glycémie, BOH, BACA, ingestion, taille de portée, toxémie.</span></div><div><b>Agneaux</b><br><span class="small">Vitalité, température, glycémie, protéines totales, colostrum, nombril.</span></div><div><b>Parasitisme</b><br><span class="small">FAMACHA, NEC, diarrhée, coproscopies, dynamique de lot.</span></div><div><b>Boiteries</b><br><span class="small">Score locomotion, lésions, sols, humidité, parage et contagion.</span></div></div></div>`}
+function groupedFindings(){
+  const fs=getFindings(),groups={};
+  fs.forEach(x=>{const key=x.subject||'Troupeau / contexte';(groups[key]||(groups[key]=[])).push(x)});
+  return groups;
+}
+function openDetailedAnalysis(){
+  const el=document.getElementById('ovin-analysis-details');
+  if(el){el.open=true;el.scrollIntoView({behavior:'smooth',block:'start'})}
+}
+function renderAnalysis(){
+  let fs=getFindings(),groups=groupedFindings();
+  analysis.innerHTML=`<div class="card"><div class="header-row"><div><h2>Analyse & interprétation</h2><p class="small">Pistes de travail regroupées pour éviter les doublons. Validation du technicien indispensable.</p></div><button class="btn" onclick="openDetailedAnalysis()">Ouvrir l’analyse détaillée</button></div>${Object.keys(groups).length?Object.entries(groups).map(([name,items])=>`<div class="interp-group"><h4>${esc(name)}</h4>${items.map(x=>`<div class="list-item"><span class="badge ${x.level==='anormal'?'bad':'warn'}">${esc(x.level)}</span> ${esc(x.text)}</div>`).join('')}</div>`).join(''):'<div class="badge ok">Aucun écart automatique détecté dans les données saisies.</div>'}</div>
+  <details id="ovin-analysis-details" class="card deep-analysis"><summary><b>🧠 Analyse détaillée par grands axes ovins</b></summary>
+  <div class="review-grid" style="margin-top:12px">
+    <div class="review-theme"><h4>Préparation mise-bas</h4><span class="small">NEC, glycémie, BOH, BACA, ingestion, taille de portée, toxémie. Croiser les écarts avec l’alimentation et l’historique du lot.</span></div>
+    <div class="review-theme"><h4>Agneaux / colostrum</h4><span class="small">Vitalité, température, glycémie, protéines totales, qualité/rapidité de prise colostrale et nombril.</span></div>
+    <div class="review-theme"><h4>Parasitisme</h4><span class="small">FAMACHA, NEC, diarrhée, coproscopies, dynamique de lot, pâturage et traitements.</span></div>
+    <div class="review-theme"><h4>Boiteries</h4><span class="small">Locomotion, lésions, humidité, sols, parage, contagion et organisation des lots.</span></div>
+    <div class="review-theme"><h4>Hydratation / eau</h4><span class="small">Accès, nombre de points d’eau, qualité mesurée, propreté et courants parasites.</span></div>
+    <div class="review-theme"><h4>Bâtiment / ambiance</h4><span class="small">Ventilation, densité, litière, cases d’agnelage, zone agneaux et hygiène.</span></div>
+  </div></details>`;
+}
 function renderActions(){let v=activeVisit();if(!v){actions.innerHTML='<div class="card">Ouvrez une visite.</div>';return}actions.innerHTML=`<div class="card"><h2>Ajouter une action</h2><div class="grid"><div class="field"><label>Thème</label><select id="atheme"><option>Alimentation</option><option>Agnelage / colostrum</option><option>Parasitisme</option><option>Boiteries</option><option>Bâtiment</option><option>Eau</option><option>Sanitaire</option></select></div><div class="field"><label>Priorité</label><select id="ap"><option>Haute</option><option>Moyenne</option><option>Basse</option></select></div><div class="field"><label>Échéance</label><input id="ad" type="date"></div></div><div class="field"><label>Action concrète</label><textarea id="atxt"></textarea></div><button class="btn" onclick="addAction()">Ajouter</button></div><div class="card"><h3>Plan d’action</h3>${v.actions.map((a,i)=>`<div class="list-item"><span class="badge ${a.priority==='Haute'?'bad':a.priority==='Moyenne'?'warn':'info'}">${a.priority}</span> <b>${esc(a.theme)}</b> — ${esc(a.text)}<br><span class="small">Échéance : ${esc(a.date||'non définie')}</span></div>`).join('')||'<span class="small">Aucune action.</span>'}</div>`}
 function addAction(){let v=activeVisit();if(!atxt.value.trim())return;v.actions.push({theme:atheme.value,priority:ap.value,date:ad.value,text:atxt.value.trim(),status:'À faire'});save()}
-function renderReport(){let v=activeVisit(),f=activeFarm();if(!v){report.innerHTML='<div class="card">Ouvrez une visite.</div>';return}let ss=db.subjects.filter(s=>s.visitId===v.id),fs=getFindings();report.innerHTML=`<div class="card"><h2>Compte rendu – Audit Ovin</h2><p><b>${esc(f?.name||'')}</b><br>${esc(f?.owner||'')} • EDE ${esc(f?.ede||'')} • ${esc(f?.commune||'')}<br>Visite du ${v.date} – ${esc(v.type)} – ${esc(v.tech||'')}</p></div><div class="card"><h3>Sujets / lots observés</h3>${ss.map(s=>`<div>${esc(s.name)} — ${esc(s.stage)} — effectif ${s.count||1}</div>`).join('')||'Aucun'}</div><div class="card"><h3>Points à approfondir</h3>${fs.map(x=>`<div>• ${esc(x.text)}</div>`).join('')||'Aucun écart automatique détecté.'}</div><div class="card"><h3>Plan d’action</h3>${v.actions.map(a=>`<div>• <b>${esc(a.theme)}</b> – ${esc(a.text)} (${esc(a.priority)})</div>`).join('')||'Aucune action.'}</div><div class="card"><h3>Conclusion technicien</h3><textarea onchange="activeVisit().conclusion=this.value;save()">${esc(v.conclusion||'')}</textarea></div><div class="actions no-print"><button class="btn" onclick="window.print()">Imprimer / PDF</button><button class="btn alt" onclick="exportVisit()">Exporter la visite JSON</button></div>`}
-function renderBackup(){let c=cloudCfg();backup.innerHTML=`<div class="card"><h2>Supabase / synchronisation</h2><div class="grid"><div class="field"><label>URL Supabase</label><input id="supaUrl" value="${esc(c.url)}"></div><div class="field"><label>Clé publique Supabase</label><input id="supaKey" type="password" value="${esc(c.key)}" placeholder="sb_publishable_... ou anon key"></div></div><div class="actions"><button class="btn" onclick="saveCloudConfig()">Enregistrer Supabase</button><button class="btn alt" onclick="testCloud()">Tester la connexion</button><button class="btn alt" onclick="cloudBackup(true)">Synchroniser maintenant</button><button class="btn alt" onclick="cloudRestore()">Restaurer depuis le cloud</button></div><p class="small">Projet préconfiguré : ${esc(DEFAULT_SUPABASE_URL)}. Les données Ovin utilisent uniquement la table <b>ovin_backups</b>. Les comptes et rôles proviennent de la table <b>profiles</b> commune avec les autres applications.</p></div><div class="card"><h2>Sauvegarde de secours</h2><div class="actions"><button class="btn" onclick="downloadAll()">Télécharger la sauvegarde complète</button><label class="btn alt">Restaurer JSON<input class="hidden" type="file" accept="application/json" onchange="restoreFile(this.files[0])"></label><button class="btn danger" onclick="if(confirm('Tout effacer sur cet appareil ?')){localStorage.removeItem(APP);location.reload()}">Effacer les données locales</button></div><p class="small">Les données restent enregistrées localement, même sans réseau. La synchronisation cloud reprend au retour de la connexion.</p></div><div class="card"><h3>Version</h3><p>Audit Ovin GDS 32-65 – v${APP_VERSION} Supabase</p><p class="small">Version autonome sans base métier ni import CSV.</p></div>`}
+
+const reviewThemes=['Mesures','Audit troupeau','Alimentation','Bâtiment / eau','Analyse & interprétation','Plan d’action'];
+function ensureReview(v){
+  if(!v.review)v.review={reviewer:'',general:'',validatedAt:'',themes:{}};
+  if(!v.review.themes)v.review.themes={};
+  reviewThemes.forEach(t=>{if(!v.review.themes[t])v.review.themes[t]={status:'Non revu',note:''}});
+  return v.review;
+}
+function setReviewField(field,val){let v=activeVisit();if(!v)return;let r=ensureReview(v);r[field]=val;saveLocalOnly()}
+function setReviewTheme(theme,field,val){let v=activeVisit();if(!v)return;let r=ensureReview(v);r.themes[theme][field]=val;saveLocalOnly()}
+function validateReview(){let v=activeVisit();if(!v)return;let r=ensureReview(v);r.validatedAt=new Date().toISOString();save();alert('Relecture enregistrée.')}
+function reviewDeepLink(v){return location.href.split('?')[0].split('#')[0]+'?review='+encodeURIComponent(v.id)}
+async function copyReviewLink(){let v=activeVisit();if(!v)return;let link=reviewDeepLink(v);try{await navigator.clipboard.writeText(link);alert('Lien de relecture copié.')}catch(e){prompt('Copiez ce lien :',link)}}
+function renderReview(){
+  let v=activeVisit();if(!v){review.innerHTML='<div class="card">Ouvrez une visite.</div>';return}
+  let r=ensureReview(v),flags=reviewThemes.filter(t=>['À discuter','À modifier'].includes(r.themes[t].status));
+  review.innerHTML=`<div class="card"><div class="header-row"><div><h2>Relecture collègue</h2><p class="small">Synthèse de la visite sans détail de reproduction bovine. La collègue peut valider chaque thème et signaler uniquement les points à reprendre.</p></div><span class="badge ${r.validatedAt?'ok':'warn'}">${r.validatedAt?'Terminée':'En cours'}</span></div>
+  <div class="grid field-grid-compact"><div class="field"><label>Collègue</label><input value="${esc(r.reviewer||'')}" oninput="setReviewField('reviewer',this.value)" onblur="finishEditing()"></div><div class="field"><label>Lien direct</label><div class="actions"><button class="btn alt" onclick="copyReviewLink()">Copier le lien</button></div></div></div></div>
+  <div class="review-grid">${reviewThemes.map(t=>`<div class="review-theme"><h4>${esc(t)}</h4><select onchange="setReviewTheme('${t.replace(/'/g,"\\'")}','status',this.value)">${['Non revu','Validé','À discuter','À modifier'].map(x=>`<option ${r.themes[t].status===x?'selected':''}>${x}</option>`).join('')}</select><textarea placeholder="Commentaire éventuel" oninput="setReviewTheme('${t.replace(/'/g,"\\'")}','note',this.value)" onblur="finishEditing()">${esc(r.themes[t].note||'')}</textarea></div>`).join('')}</div>
+  <div class="card"><h3>Synthèse des points à reprendre</h3>${flags.length?flags.map(t=>`<div class="list-item"><b>${esc(t)}</b> — ${esc(r.themes[t].status)}${r.themes[t].note?' : '+esc(r.themes[t].note):''}</div>`).join(''):'<div class="badge ok">Aucun point marqué à discuter ou modifier.</div>'}<div class="field" style="margin-top:12px"><label>Conclusion de la relecture</label><textarea oninput="setReviewField('general',this.value)" onblur="finishEditing()">${esc(r.general||'')}</textarea></div><button class="btn" onclick="validateReview()">✓ Relecture terminée</button></div>`;
+}
+function applyReviewDeepLink(){
+  try{
+    const idv=new URLSearchParams(location.search).get('review');
+    if(idv && db.visits.some(v=>v.id===idv)){db.activeVisitId=idv;localStorage.setItem(APP,JSON.stringify(db));setTimeout(()=>show('review'),50)}
+  }catch(e){}
+}
+
+function renderReport(){let v=activeVisit(),f=activeFarm();if(!v){report.innerHTML='<div class="card">Ouvrez une visite.</div>';return}let ss=db.subjects.filter(s=>s.visitId===v.id),fs=getFindings();report.innerHTML=`<div class="card"><h2>Compte rendu – Audit Ovin</h2><p><b>${esc(f?.name||'')}</b><br>${esc(f?.owner||'')} • EDE ${esc(f?.ede||'')} • ${esc(f?.commune||'')}<br>Visite du ${v.date} – ${esc(v.type)} – ${esc(v.tech||'')}</p></div><div class="card"><h3>Sujets / lots observés</h3>${ss.map(s=>`<div>${esc(s.name)} — ${esc(s.stage)} — effectif ${s.count||1}</div>`).join('')||'Aucun'}</div><div class="card"><h3>Points à approfondir</h3>${fs.map(x=>`<div>• ${esc(x.text)}</div>`).join('')||'Aucun écart automatique détecté.'}</div><div class="card"><h3>Plan d’action</h3>${v.actions.map(a=>`<div>• <b>${esc(a.theme)}</b> – ${esc(a.text)} (${esc(a.priority)})</div>`).join('')||'Aucune action.'}</div><div class="card"><h3>Conclusion technicien</h3><textarea oninput="activeVisit().conclusion=this.value;saveLocalOnly()" onblur="finishEditing()">${esc(v.conclusion||'')}</textarea></div>${v.review?.validatedAt?`<div class="card"><h3>Relecture collègue</h3><p><b>${esc(v.review.reviewer||'Collègue')}</b> — relecture terminée.</p><p>${esc(v.review.general||'Aucune remarque générale.')}</p></div>`:''}<div class="actions no-print"><button class="btn" onclick="window.print()">Imprimer / PDF</button><button class="btn alt" onclick="exportVisit()">Exporter la visite JSON</button></div>`}
+function renderBackup(){let c=cloudCfg();backup.innerHTML=`<div class="card"><h2>Supabase / synchronisation</h2><div class="grid"><div class="field"><label>URL Supabase</label><input id="supaUrl" value="${esc(c.url)}"></div><div class="field"><label>Clé publique Supabase</label><input id="supaKey" type="password" value="${esc(c.key)}" placeholder="sb_publishable_... ou anon key"></div></div><div class="actions"><button class="btn" onclick="saveCloudConfig()">Enregistrer Supabase</button><button class="btn alt" onclick="testCloud()">Tester la connexion</button><button class="btn alt" onclick="cloudBackup(true)">Synchroniser maintenant</button><button class="btn alt" onclick="cloudRestore()">Restaurer depuis le cloud</button></div><p class="small">Projet préconfiguré : ${esc(DEFAULT_SUPABASE_URL)}. Les données Ovin utilisent uniquement la table <b>ovin_backups</b>. Les comptes et rôles proviennent de la table <b>profiles</b> commune avec les autres applications.</p></div><div class="card"><h2>Sauvegarde de secours</h2><div class="actions"><button class="btn" onclick="downloadAll()">Télécharger la sauvegarde complète</button><label class="btn alt">Restaurer JSON<input class="hidden" type="file" accept="application/json" onchange="restoreFile(this.files[0])"></label><button class="btn danger" onclick="if(confirm('Tout effacer sur cet appareil ?')){localStorage.removeItem(APP);location.reload()}">Effacer les données locales</button></div><p class="small">Les données restent enregistrées localement, même sans réseau. La synchronisation cloud reprend au retour de la connexion.</p></div><div class="card"><h3>Version</h3><p>Audit Ovin GDS 32-65 – v${APP_VERSION} Supabase</p><p class="small">Version autonome sans base métier ni import CSV. Correctifs ergonomie/synchronisation/relecture portés depuis Audit Bovin v14.6.21.16.</p></div>`}
 function download(name,obj){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
 function downloadAll(){download(`Audit_Ovin_sauvegarde_${new Date().toISOString().slice(0,10)}.json`,db)}function exportVisit(){let v=activeVisit();download(`Audit_Ovin_${v.date}.json`,{farm:activeFarm(),visit:v,subjects:db.subjects.filter(s=>s.visitId===v.id)})}
 function restoreFile(file){let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);save()}catch(e){alert('Fichier invalide')}};r.readAsText(file)}
-initTabs();renderAll();{let c=cloudCfg();setCloudStatus(c.key?'☁️ Connexion requise':'☁️ Supabase à configurer')}initAuth();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+
+function applyWorkMode(mode){
+  const terrain=mode==='terrain';
+  document.body.classList.toggle('terrain-mode',terrain);
+  localStorage.setItem('auditOvin.workMode',terrain?'terrain':'bureau');
+  const b=document.getElementById('workModeBtn');
+  if(b)b.textContent=terrain?'🖥️ Bureau':'📱 Terrain';
+}
+function toggleWorkMode(){applyWorkMode(document.body.classList.contains('terrain-mode')?'bureau':'terrain')}
+function initKeyboardDismissButton(){
+  let b=document.createElement('button');
+  b.id='keyboard-dismiss';b.className='keyboard-dismiss';b.type='button';b.innerHTML='⌄ <span>Clavier</span>';
+  document.body.appendChild(b);
+  const editable=e=>e&&e.matches&&e.matches('input:not([type=checkbox]):not([type=radio]):not([type=file]):not([type=button]):not([type=submit]),textarea,select');
+  const update=()=>b.classList.toggle('visible',editable(document.activeElement));
+  document.addEventListener('focusin',()=>setTimeout(update,0));
+  document.addEventListener('focusout',()=>setTimeout(()=>{update();finishEditing()},130));
+  b.addEventListener('pointerdown',e=>e.preventDefault());
+  b.onclick=()=>{let e=document.activeElement;if(editable(e)){e.dispatchEvent(new Event('change',{bubbles:true}));e.blur()}b.classList.remove('visible')};
+  if(window.visualViewport)window.visualViewport.addEventListener('resize',update);
+}
+document.addEventListener('keydown',e=>{
+  if(e.key==='Enter' && e.target && e.target.matches('[data-measure-input]')){
+    e.preventDefault();
+    const inputs=[...document.querySelectorAll('[data-measure-input]')];
+    const i=inputs.indexOf(e.target);
+    e.target.dispatchEvent(new Event('input',{bubbles:true}));
+    if(i>=0 && i<inputs.length-1){inputs[i+1].focus();inputs[i+1].select?.()}
+    else e.target.blur();
+  }
+});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){localStorage.setItem(APP,JSON.stringify(db));}});
+window.addEventListener('pagehide',()=>{localStorage.setItem(APP,JSON.stringify(db));});
+
+initTabs();renderAll();applyWorkMode(localStorage.getItem('auditOvin.workMode')||'bureau');initKeyboardDismissButton();applyReviewDeepLink();{let c=cloudCfg();setCloudStatus(c.key?'☁️ Connexion requise':'☁️ Supabase à configurer')}initAuth();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=1.4',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});
 </script>
 </body></html>

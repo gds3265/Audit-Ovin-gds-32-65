@@ -1,0 +1,2 @@
+Aucun nouveau SQL n'est nécessaire si PATCH_SECURITE_OVIN_V1_3.sql a déjà été exécuté.
+La v1.4 réutilise la table public.ovin_backups et les comptes public.profiles existants.
