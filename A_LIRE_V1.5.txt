@@ -1,0 +1,11 @@
+AUDIT OVIN GDS 32-65 — v1.5
+
+Nouveautés :
+- nouvel icône Ovin intégré à l'application installable ;
+- icônes PWA 192, 512, maskable et Apple touch ;
+- bouton Supprimer dans l'historique des visites ;
+- confirmation avant suppression ;
+- suppression conjointe des sujets/lots et mesures de la visite ;
+- suppression enregistrée localement puis synchronisée dans ovin_backups.
+
+Aucun nouveau SQL n'est nécessaire si le patch de sécurité v1.3 a déjà été exécuté.
