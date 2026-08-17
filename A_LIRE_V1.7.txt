@@ -1,0 +1,26 @@
+AUDIT OVIN GDS 32-65 — v1.7
+
+Portage des évolutions communes de l'Audit Bovin v14.6.21.23.
+
+AJOUTÉ / CORRIGÉ
+- PWA strictement limitée au dépôt /Audit-Ovin-gds-32-65/ :
+  l'Audit Ovin ne supprime plus les caches des autres applications GDS.
+- Service worker et manifeste avec id/start_url/scope séparés.
+- Synchronisations automatiques silencieuses : l'indicateur cloud ne clignote plus inutilement.
+- Présence collaborative sur la visite active :
+  avertissement si un autre utilisateur connecté a la même visite ouverte récemment.
+- Analyse : les lots/animaux concernés restent identifiés dans les écarts.
+- Restitution : Rapport Technique et Rapport Expert sont maintenant indépendants.
+- Rapport Technique : sujets/lots, mesures colorées vert/jaune/rouge, observations,
+  et toutes les réponses saisies dans Audit troupeau / Alimentation / Bâtiment / Eau.
+- Rapport Expert : analyse regroupée, sujets/lots concernés, plan d'action,
+  conclusion et relecture collègue.
+- Les pistes identiques concernant plusieurs sujets/lots sont regroupées dans le rapport Expert.
+
+VOLONTAIREMENT NON PORTÉ
+- données technico-économiques bovines ;
+- score reproduction / classement des vaches ;
+- tableau de restitution reproduction ;
+- IVV, vêlages, primipares, génisses et import métier bovin.
+
+Aucun nouveau SQL nécessaire : la présence collaborative est stockée dans le payload Ovin déjà synchronisé.

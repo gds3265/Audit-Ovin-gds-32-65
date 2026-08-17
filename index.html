@@ -81,6 +81,31 @@ header{padding-top:max(14px,env(safe-area-inset-top))}
 .install-help-box{max-width:430px;background:#fff;border-radius:16px;padding:18px;color:#1f2b25;box-shadow:0 18px 60px #0007}
 .install-help-box h3{margin-top:0}
 .install-help-box .actions{justify-content:flex-end}
+
+/* v1.7 — portage des évolutions communes Audit Bovin v14.6.21.23 */
+.visit-presence{font-size:12px;margin-top:3px}
+.visit-presence.warn{color:#ffe6a6;font-weight:800}
+.visit-presence.ok{color:#d7f5e5}
+.report-choice{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.report-section{break-inside:avoid;margin:12px 0}
+.report-table{width:100%;border-collapse:collapse;font-size:12px}
+.report-table th,.report-table td{border:1px solid #d4ddd7;padding:6px;vertical-align:top;text-align:left}
+.report-table th{background:#f0f4f1}
+.m-ok{background:#dff3e7!important}
+.m-warn{background:#fff0bd!important}
+.m-bad{background:#f7d7d9!important}
+.report-print-only{display:none}
+@media print{
+  .report-print-only{display:block}
+  .no-print,.tabs,header .header-user,#installHelp{display:none!important}
+  header{position:static!important}
+  body{background:#fff}
+  .panel{display:none!important}
+  #report.panel{display:block!important}
+  #report .card{box-shadow:none;border:0;padding:4px 0}
+  .report-table{font-size:10px}
+}
+
 </style>
 </head>
 <body>
@@ -102,7 +127,7 @@ header{padding-top:max(14px,env(safe-area-inset-top))}
 <div id="installHelp" class="install-help hidden"><div class="install-help-box"><h3>Installer Audit Ovin</h3><div id="installHelpText">Chrome prépare l’installation…</div><div class="actions" style="margin-top:14px"><button class="btn alt" onclick="document.getElementById('installHelp').classList.add('hidden')">Fermer</button></div></div></div>
 <header>
   <div class="header-row">
-    <div><div class="brand">🐑 Audit Ovin GDS 32-65 <span id="appVersionBadge" class="version-badge">v1.6</span></div><div class="sub" id="activeVisit">Aucune visite active</div><div class="sub" id="cloudStatus">☁️ Supabase à configurer</div></div>
+    <div><div class="brand">🐑 Audit Ovin GDS 32-65 <span id="appVersionBadge" class="version-badge">v1.7</span></div><div class="sub" id="activeVisit">Aucune visite active</div><div id="activePresence" class="visit-presence"></div><div class="sub" id="cloudStatus">☁️ Supabase à configurer</div></div>
     <div id="userBox" class="header-user hidden"><button id="installAppBtn" class="hidden" onclick="installApp()">⬇ Installer</button><button id="workModeBtn" onclick="toggleWorkMode()">📱 Terrain</button><span id="userBadge"></span><button onclick="signOut()">Déconnexion</button></div>
   </div>
 </header>
@@ -124,7 +149,7 @@ header{padding-top:max(14px,env(safe-area-inset-top))}
 </div>
 <script>
 const APP='auditOvinGDS_v1';
-const APP_VERSION='1.6';
+const APP_VERSION='1.7';
 const DEFAULT_SUPABASE_URL='https://ckylznynqsefqkmtjcjf.supabase.co';
 const CLOUD_ID='audit-ovin-main';
 let cloudTimer=null, cloudBusy=false, cloudPending=false, renderPending=false;
@@ -170,7 +195,7 @@ function enterApplication(){
   document.getElementById('userBox').classList.remove('hidden');
   document.getElementById('userBadge').textContent=(currentProfile.display_name||currentProfile.email)+' · '+(currentProfile.role||'technicien');
   setCloudStatus('☁️ Connecté');
-  cloudRestoreSilent();
+  cloudRestoreSilent();setTimeout(()=>refreshVisitPresence(true),200);
 }
 async function signOut(){
   try{let c=cloudCfg();await fetch(c.url+'/auth/v1/logout',{method:'POST',headers:authHeaders()})}catch{}
@@ -210,7 +235,27 @@ function scheduleCloudSync(){
 function flushPendingCloud(){
   if(cloudPending && !isEditableActive()){cloudPending=false;cloudBackup(false)}
 }
-async function cloudBackup(showMessage=true){if(isEditableActive()&&!showMessage){cloudPending=true;setCloudStatus('☁️ Saisie locale • synchro en attente');return false}if(cloudBusy)return false;let c=cloudCfg();if(!c.key){setCloudStatus('☁️ Supabase à configurer');if(showMessage)alert('Renseignez la clé publique Supabase dans Sauvegarde.');return false}cloudBusy=true;setCloudStatus('☁️ Synchronisation…');try{let payload={id:CLOUD_ID,payload:db,updated_at:new Date().toISOString()};let r=await supa('ovin_backups?on_conflict=id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});if(!r.ok)throw new Error(await r.text());localStorage.setItem('auditOvin.lastSync',new Date().toISOString());setCloudStatus('☁️ Cloud à jour');if(showMessage)alert('Sauvegarde Supabase effectuée.');return true}catch(e){console.error(e);setCloudStatus('☁️ En attente d’envoi');if(showMessage)alert('Synchronisation impossible : '+e.message);return false}finally{cloudBusy=false}}
+async function cloudBackup(showMessage=true){
+  if(isEditableActive()&&!showMessage){cloudPending=true;setCloudStatus('☁️ Saisie locale • synchro en attente');return false}
+  if(cloudBusy)return false;
+  let c=cloudCfg();
+  if(!c.key){setCloudStatus('☁️ Supabase à configurer');if(showMessage)alert('Renseignez la clé publique Supabase dans Sauvegarde.');return false}
+  cloudBusy=true;
+  if(showMessage)setCloudStatus('☁️ Synchronisation…');
+  try{
+    let payload={id:CLOUD_ID,payload:db,updated_at:new Date().toISOString()};
+    let r=await supa('ovin_backups?on_conflict=id',{method:'POST',headers:{'Prefer':'resolution=merge-duplicates,return=minimal'},body:JSON.stringify(payload)});
+    if(!r.ok)throw new Error(await r.text());
+    localStorage.setItem('auditOvin.lastSync',new Date().toISOString());
+    setCloudStatus('☁️ Cloud à jour');
+    if(showMessage)alert('Sauvegarde Supabase effectuée.');
+    return true
+  }catch(e){
+    console.error(e);setCloudStatus('☁️ En attente d’envoi');
+    if(showMessage)alert('Synchronisation impossible : '+e.message);
+    return false
+  }finally{cloudBusy=false}
+}
 async function cloudRestore(){let c=cloudCfg();if(!c.key)return alert('Renseignez d’abord la clé publique Supabase.');if(!confirm('Restaurer les données Ovin depuis Supabase ? Les données locales seront remplacées par la sauvegarde cloud.'))return;setCloudStatus('☁️ Restauration…');try{let r=await supa('ovin_backups?id=eq.'+encodeURIComponent(CLOUD_ID)+'&select=payload,updated_at',{method:'GET'});if(!r.ok)throw new Error(await r.text());let rows=await r.json();if(!rows.length)return alert('Aucune sauvegarde Ovin trouvée dans Supabase.');db=rows[0].payload;localStorage.setItem(APP,JSON.stringify(db));renderAll();setCloudStatus('☁️ Cloud restauré');alert('Restauration terminée.')}catch(e){setCloudStatus('☁️ Erreur cloud');alert('Restauration impossible : '+e.message)}}
 function saveCloudConfig(){let u=(document.getElementById('supaUrl').value||'').trim().replace(/\/rest\/v1\/?$/,'').replace(/\/$/,'');let k=(document.getElementById('supaKey').value||'').trim();localStorage.setItem('auditOvin.supabaseUrl',u||DEFAULT_SUPABASE_URL);localStorage.setItem('auditOvin.supabaseKey',k);if(document.getElementById('loginSupaUrl'))document.getElementById('loginSupaUrl').value=u||DEFAULT_SUPABASE_URL;if(document.getElementById('loginSupaKey'))document.getElementById('loginSupaKey').value=k;renderBackup();if(k){setCloudStatus('☁️ Prêt à synchroniser');cloudBackup(false)}else setCloudStatus('☁️ Supabase à configurer')}
 async function testCloud(){let c=cloudCfg();if(!c.key)return alert('Renseignez la clé publique Supabase.');try{let r=await supa('ovin_backups?select=id&limit=1',{method:'GET'});if(!r.ok)throw new Error(await r.text());setCloudStatus('☁️ Connexion Supabase OK');alert('Connexion Supabase Ovin OK.')}catch(e){setCloudStatus('☁️ Erreur Supabase');alert('Connexion impossible : '+e.message)}}
@@ -224,7 +269,7 @@ const refs={
 'Agneaux J+1':{nec:[3,3],muscle:[2,3],limbs:[1,1.5],urineColor:[1,2],urinePH:[6,7],urineRedox:[-100,0],urineBrix:[0,2],urineDensity:[1015,1025],gly:[80,120],boh:[0,0.2],bloodPH:[7.34,7.45],protein:[65,999],fecesPH:[6.5,6.8],temp:[39,39.5]}
 };
 const measureLabels={nec:'NEC',muscle:'Muscle',srr:'SRR',limbs:'Membres',urineColor:'Couleur urine',urinePH:'pH urine',urineRedox:'Redox urine',urineBrix:'Brix urine (%)',urineDensity:'Densité urine',gly:'Glycémie',boh:'BOH',bloodPH:'pH sang',urea:'Urémie',protein:'Protéines totales',fecesPH:'pH selles',fecesRedox:'Redox selles',temp:'Température'};
-let db=JSON.parse(localStorage.getItem(APP)||'{"farms":[],"visits":[],"subjects":[],"activeVisitId":null}');
+let db=JSON.parse(localStorage.getItem(APP)||'{"farms":[],"visits":[],"subjects":[],"activeVisitId":null,"collaborationPresence":{}}');db.collaborationPresence=db.collaborationPresence||{};
 function saveLocalOnly(){
   localStorage.setItem(APP,JSON.stringify(db));
   scheduleCloudSync();
@@ -242,16 +287,41 @@ function finishEditing(){
 const id=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 const activeVisit=()=>db.visits.find(v=>v.id===db.activeVisitId);
 const activeFarm=()=>{let v=activeVisit();return v&&db.farms.find(f=>f.id===v.farmId)};
+function currentCollaboratorEmail(){return String(authSession?.user?.email||currentProfile?.email||'').trim().toLowerCase()}
+function collaborationPresenceForVisit(visitId){
+  const now=Date.now(),me=currentCollaboratorEmail();
+  return Object.entries(db.collaborationPresence||{}).map(([email,x])=>({email,...x}))
+    .filter(x=>x.visitId===visitId&&x.email!==me&&(now-Date.parse(x.seenAt||0))<120000);
+}
+function refreshVisitPresence(sync=true){
+  const email=currentCollaboratorEmail();if(!email)return;
+  db.collaborationPresence=db.collaborationPresence||{};
+  const now=Date.now();
+  Object.keys(db.collaborationPresence).forEach(k=>{if(now-Date.parse(db.collaborationPresence[k]?.seenAt||0)>10*60*1000)delete db.collaborationPresence[k]});
+  if(db.activeVisitId)db.collaborationPresence[email]={visitId:db.activeVisitId,seenAt:new Date().toISOString()};
+  else delete db.collaborationPresence[email];
+  localStorage.setItem(APP,JSON.stringify(db));
+  if(sync)scheduleCloudSync();
+  renderActivePresence();
+}
+function renderActivePresence(){
+  const host=document.getElementById('activePresence');if(!host)return;
+  const v=activeVisit();if(!v){host.textContent='';return}
+  const others=collaborationPresenceForVisit(v.id);
+  host.className='visit-presence '+(others.length?'warn':'ok');
+  host.textContent=others.length?'👥 Cette visite est aussi ouverte par '+others.map(x=>(x.email||'').split('@')[0]).join(', '):'✓ Aucun autre technicien détecté sur cette visite';
+}
+
 function esc(s=''){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))}
 function initTabs(){tabs.forEach(([k,l])=>{let b=document.createElement('button');b.textContent=l;b.onclick=()=>show(k);b.dataset.tab=k;document.querySelector('#tabs').appendChild(b)});show('home')}
 function show(k){document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('active',p.id===k));document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===k));window.scrollTo(0,0)}
-function renderAll(){let v=activeVisit(),f=activeFarm();document.querySelector('#activeVisit').textContent=v?`${f?.name||''} • ${v.date} • ${v.type}`:'Aucune visite active';renderHome();renderFarm();renderVisits();renderSubjects();renderMeasurements();renderFlock();renderFeed();renderBuilding();renderActions();renderAnalysis();renderReview();renderReport();renderBackup()}
+function renderAll(){let v=activeVisit(),f=activeFarm();document.querySelector('#activeVisit').textContent=v?`${f?.name||''} • ${v.date} • ${v.type}`:'Aucune visite active';renderActivePresence();renderHome();renderFarm();renderVisits();renderSubjects();renderMeasurements();renderFlock();renderFeed();renderBuilding();renderActions();renderAnalysis();renderReview();renderReport();renderBackup()}
 function renderHome(){let v=activeVisit(), subs=v?db.subjects.filter(s=>s.visitId===v.id):[];home.innerHTML=`<div class="card"><h2>Audit ovin de terrain</h2><p>Application autonome de terrain : aucune base métier ni aucun fichier d'import n'est nécessaire. Les exploitations, lots et sujets sont saisis directement dans l'application.</p><div class="kpis"><div class="kpi"><b>${db.farms.length}</b><span>exploitations</span></div><div class="kpi"><b>${db.visits.length}</b><span>visites</span></div><div class="kpi"><b>${subs.length}</b><span>sujets / lots actifs</span></div></div></div><div class="card notice"><b>Fonctionnement Ovin</b><br>Pas de base métier, pas d'import CSV et pas de module de reproduction détaillé. Saisir l'exploitation, créer la visite, puis ajouter uniquement les lots ou animaux réellement observés.</div><div class="card notice"><b>Ordre conseillé</b><br>Exploitation → Visite → Sujets/lots → Mesures → Audit troupeau → Analyse → Plan d’action → Rapport.</div><div class="card"><h3>Types de visite</h3><div class="grid"><div>• Bilan troupeau</div><div>• Préparation agnelage</div><div>• Suivi agneaux</div><div>• Diagnostic sanitaire</div><div>• Alimentation</div><div>• Bâtiment et eau</div></div></div>`}
 function renderFarm(){farm.innerHTML=`<div class="card"><h2>Nouvelle exploitation</h2><div class="grid"><div class="field"><label>Nom exploitation</label><input id="fn"></div><div class="field"><label>Éleveur</label><input id="fo"></div><div class="field"><label>N° EDE</label><input id="fede"></div><div class="field"><label>Commune</label><input id="fc"></div><div class="field"><label>Type</label><select id="ft"><option>Ovin allaitant</option><option>Ovin laitier</option><option>Mixte</option></select></div><div class="field"><label>Conduite</label><select id="fcond"><option>Bergerie</option><option>Plein air</option><option>Mixte</option><option>Transhumance</option></select></div></div><div class="field"><label>Informations permanentes</label><textarea id="fnotes"></textarea></div><button class="btn" onclick="addFarm()">Enregistrer</button></div><div class="card"><h3>Exploitations</h3>${db.farms.map(f=>`<div class="list-item"><b>${esc(f.name)}</b> <span class="small">${esc(f.ede||'')} • ${esc(f.type)}</span><br><span class="small">${esc(f.owner||'')} – ${esc(f.commune||'')}</span></div>`).join('')||'<span class="small">Aucune exploitation.</span>'}</div>`}
 function addFarm(){if(!fn.value.trim())return alert('Nom obligatoire');db.farms.push({id:id(),name:fn.value.trim(),owner:fo.value,ede:fede.value,commune:fc.value,type:ft.value,conduct:fcond.value,notes:fnotes.value});save()}
 function renderVisits(){visits.innerHTML=`<div class="card"><h2>Créer une visite</h2><div class="grid"><div class="field"><label>Exploitation</label><select id="vf">${db.farms.map(f=>`<option value="${f.id}">${esc(f.name)}</option>`).join('')}</select></div><div class="field"><label>Date</label><input id="vd" type="date" value="${new Date().toISOString().slice(0,10)}"></div><div class="field"><label>Type</label><select id="vt"><option>Bilan troupeau</option><option>Préparation agnelage</option><option>Suivi agneaux</option><option>Diagnostic sanitaire</option><option>Alimentation</option><option>Bâtiment et eau</option><option>Visite ciblée</option></select></div><div class="field"><label>Technicien</label><input id="vtech"></div></div><button class="btn" onclick="addVisit()">Créer et ouvrir</button></div><div class="card"><h3>Historique</h3>${db.visits.slice().reverse().map(v=>{let f=db.farms.find(x=>x.id===v.farmId);return `<div class="list-item"><b>${esc(f?.name||'')}</b> — ${v.date}<br><span class="small">${esc(v.type)} • ${esc(v.tech||'')}</span><div class="actions"><button class="btn alt" onclick="openVisit('${v.id}')">Ouvrir</button><button class="btn danger" onclick="deleteVisit('${v.id}')">Supprimer</button></div></div>`}).join('')||'<span class="small">Aucune visite.</span>'}</div>`}
-function addVisit(){if(!vf.value)return alert('Créer une exploitation');let v={id:id(),farmId:vf.value,date:vd.value,type:vt.value,tech:vtech.value,flock:{},feed:{},building:{},water:{},actions:[],conclusion:'',review:{reviewer:'',general:'',validatedAt:'',themes:{}}};db.visits.push(v);db.activeVisitId=v.id;save()}
-function openVisit(x){db.activeVisitId=x;save()}
+function addVisit(){if(!vf.value)return alert('Créer une exploitation');let v={id:id(),farmId:vf.value,date:vd.value,type:vt.value,tech:vtech.value,flock:{},feed:{},building:{},water:{},actions:[],conclusion:'',review:{reviewer:'',general:'',validatedAt:'',themes:{}}};db.visits.push(v);db.activeVisitId=v.id;save();setTimeout(()=>refreshVisitPresence(true),0)}
+function openVisit(x){db.activeVisitId=x;save();setTimeout(()=>refreshVisitPresence(true),0)}
 function deleteVisit(x){
   const v=db.visits.find(z=>z.id===x);if(!v)return;
   const f=db.farms.find(z=>z.id===v.farmId);
@@ -355,8 +425,77 @@ function applyReviewDeepLink(){
   }catch(e){}
 }
 
-function renderReport(){let v=activeVisit(),f=activeFarm();if(!v){report.innerHTML='<div class="card">Ouvrez une visite.</div>';return}let ss=db.subjects.filter(s=>s.visitId===v.id),fs=getFindings();report.innerHTML=`<div class="card"><h2>Compte rendu – Audit Ovin</h2><p><b>${esc(f?.name||'')}</b><br>${esc(f?.owner||'')} • EDE ${esc(f?.ede||'')} • ${esc(f?.commune||'')}<br>Visite du ${v.date} – ${esc(v.type)} – ${esc(v.tech||'')}</p></div><div class="card"><h3>Sujets / lots observés</h3>${ss.map(s=>`<div>${esc(s.name)} — ${esc(s.stage)} — effectif ${s.count||1}</div>`).join('')||'Aucun'}</div><div class="card"><h3>Points à approfondir</h3>${fs.map(x=>`<div>• ${esc(x.text)}</div>`).join('')||'Aucun écart automatique détecté.'}</div><div class="card"><h3>Plan d’action</h3>${v.actions.map(a=>`<div>• <b>${esc(a.theme)}</b> – ${esc(a.text)} (${esc(a.priority)})</div>`).join('')||'Aucune action.'}</div><div class="card"><h3>Conclusion technicien</h3><textarea oninput="activeVisit().conclusion=this.value;saveLocalOnly()" onblur="finishEditing()">${esc(v.conclusion||'')}</textarea></div>${v.review?.validatedAt?`<div class="card"><h3>Relecture collègue</h3><p><b>${esc(v.review.reviewer||'Collègue')}</b> — relecture terminée.</p><p>${esc(v.review.general||'Aucune remarque générale.')}</p></div>`:''}<div class="actions no-print"><button class="btn" onclick="window.print()">Imprimer / PDF</button><button class="btn alt" onclick="exportVisit()">Exporter la visite JSON</button></div>`}
-function renderBackup(){let c=cloudCfg();backup.innerHTML=`<div class="card"><h2>Supabase / synchronisation</h2><div class="grid"><div class="field"><label>URL Supabase</label><input id="supaUrl" value="${esc(c.url)}"></div><div class="field"><label>Clé publique Supabase</label><input id="supaKey" type="password" value="${esc(c.key)}" placeholder="sb_publishable_... ou anon key"></div></div><div class="actions"><button class="btn" onclick="saveCloudConfig()">Enregistrer Supabase</button><button class="btn alt" onclick="testCloud()">Tester la connexion</button><button class="btn alt" onclick="cloudBackup(true)">Synchroniser maintenant</button><button class="btn alt" onclick="cloudRestore()">Restaurer depuis le cloud</button></div><p class="small">Projet préconfiguré : ${esc(DEFAULT_SUPABASE_URL)}. Les données Ovin utilisent uniquement la table <b>ovin_backups</b>. Les comptes et rôles proviennent de la table <b>profiles</b> commune avec les autres applications.</p></div><div class="card"><h2>Sauvegarde de secours</h2><div class="actions"><button class="btn" onclick="downloadAll()">Télécharger la sauvegarde complète</button><label class="btn alt">Restaurer JSON<input class="hidden" type="file" accept="application/json" onchange="restoreFile(this.files[0])"></label><button class="btn danger" onclick="if(confirm('Tout effacer sur cet appareil ?')){localStorage.removeItem(APP);location.reload()}">Effacer les données locales</button></div><p class="small">Les données restent enregistrées localement, même sans réseau. La synchronisation cloud reprend au retour de la connexion.</p></div><div class="card"><h3>Version</h3><p>Audit Ovin GDS 32-65 – v${APP_VERSION} Supabase</p><p class="small">Version autonome sans base métier ni import CSV. Icône installable et suppression des visites ajoutées en v1.5. PWA renforcée, cache forcé et version visible en v1.6. Correctifs ergonomie/synchronisation/relecture portés depuis Audit Bovin v14.6.21.16.</p></div>`}
+
+function measureClassForReport(s,k,val){
+  let r=refs[s.stage]?.[k],n=Number(normalizeDecimal(val));
+  if(!r||Number.isNaN(n))return '';
+  if(n<r[0]||n>r[1])return 'm-bad';
+  const span=Math.max(0.0001,r[1]-r[0]),edge=span*.15;
+  if(n<r[0]+edge||n>r[1]-edge)return 'm-warn';
+  return 'm-ok';
+}
+function reportMeasureTable(ss){
+  const keys=Object.keys(measureLabels);
+  return ss.map(s=>{
+    const filled=keys.filter(k=>String(s.measures?.[k]??'').trim()!=='');
+    if(!filled.length)return '';
+    return `<div class="report-section"><h4>${esc(s.name)} — ${esc(s.stage)} — effectif ${s.count||1}</h4><table class="report-table"><tr><th>Mesure</th><th>Valeur</th><th>Lecture</th></tr>${filled.map(k=>`<tr><td>${esc(measureLabels[k])}</td><td class="${measureClassForReport(s,k,s.measures[k])}">${esc(s.measures[k])}</td><td>${classify(k,s.measures[k],s.stage).replace(/<[^>]+>/g,' ')}</td></tr>`).join('')}</table></div>`;
+  }).join('');
+}
+function reportObservations(ss){
+  return ss.map(s=>{
+    const rows=Object.entries(s.observations||{}).filter(([k,v])=>v);
+    return rows.length?`<div class="report-section"><h4>${esc(s.name)} — observations</h4><table class="report-table">${rows.map(([k,v])=>`<tr><th>${esc(k)}</th><td>${esc(v)}</td></tr>`).join('')}</table></div>`:'';
+  }).join('');
+}
+function reportObjectTable(title,obj,fields){
+  const rows=fields.filter(([k])=>String(obj?.[k]??'').trim()!=='');
+  if(!rows.length)return '';
+  return `<div class="report-section"><h3>${esc(title)}</h3><table class="report-table">${rows.map(([k,l])=>`<tr><th>${esc(l)}</th><td>${esc(obj[k])}</td></tr>`).join('')}</table></div>`;
+}
+function groupedReportFindings(fs){
+  const g={};fs.forEach(x=>{const k=x.text.replace(/\s+chez\s+.+$/,'');(g[k]||(g[k]=[])).push(x)});
+  return Object.entries(g).map(([k,items])=>`<div class="list-item"><b>${esc(k)}</b>${items.length>1?`<br><span class="small">Concernés : ${items.map(x=>esc(x.subject||'troupeau')).join(', ')}</span>`:''}</div>`).join('');
+}
+function reportHeader(v,f,title){
+  return `<div class="card"><h2>${esc(title)}</h2><p><b>${esc(f?.name||'')}</b><br>${esc(f?.owner||'')} • EDE ${esc(f?.ede||'')} • ${esc(f?.commune||'')}<br>Visite du ${esc(v.date)} – ${esc(v.type)} – ${esc(v.tech||'')}</p></div>`;
+}
+function buildTechnicalReport(v,f,ss){
+  return reportHeader(v,f,'Rapport Technique – Audit Ovin')+
+    `<div class="card"><h3>Sujets / lots observés</h3>${ss.map(s=>`<div>${esc(s.name)} — ${esc(s.stage)} — effectif ${s.count||1}${s.note?' — '+esc(s.note):''}</div>`).join('')||'Aucun'}</div>`+
+    `<div class="card"><h3>Mesures individuelles / lots</h3>${reportMeasureTable(ss)||'Aucune mesure.'}</div>`+
+    `<div class="card"><h3>Observations terrain</h3>${reportObservations(ss)||'Aucune observation.'}</div>`+
+    `<div class="card"><h2>Audit détaillé — toutes les réponses saisies</h2>`+
+    reportObjectTable('Audit troupeau',v.flock,flockFields)+
+    reportObjectTable('Alimentation',v.feed,feedFields)+
+    reportObjectTable('Bâtiment',v.building,buildFields)+
+    reportObjectTable('Eau',v.water,waterFields)+
+    `</div><div class="card"><h3>Conclusion technicien</h3><p>${esc(v.conclusion||'')}</p></div>`;
+}
+function buildExpertReport(v,f,ss,fs){
+  return reportHeader(v,f,'Rapport Expert – Audit Ovin')+
+    `<div class="card"><h3>Analyse & interprétation</h3>${fs.length?groupedReportFindings(fs):'Aucun écart automatique détecté.'}</div>`+
+    `<div class="card"><h3>Plan d’action</h3>${v.actions.map(a=>`<div>• <b>${esc(a.theme)}</b> – ${esc(a.text)} (${esc(a.priority)})</div>`).join('')||'Aucune action.'}</div>`+
+    `<div class="card"><h3>Conclusion technicien</h3><p>${esc(v.conclusion||'')}</p></div>`+
+    (v.review?.validatedAt?`<div class="card"><h3>Relecture collègue</h3><p><b>${esc(v.review.reviewer||'Collègue')}</b></p><p>${esc(v.review.general||'Aucune remarque générale.')}</p></div>`:'');
+}
+function printReport(kind){
+  let v=activeVisit(),f=activeFarm();if(!v)return;
+  let ss=db.subjects.filter(s=>s.visitId===v.id),fs=getFindings();
+  const printHost=document.getElementById('reportPrintHost');
+  printHost.innerHTML=kind==='technical'?buildTechnicalReport(v,f,ss):buildExpertReport(v,f,ss,fs);
+  document.body.dataset.printReport=kind;
+  setTimeout(()=>window.print(),50);
+}
+function renderReport(){
+  let v=activeVisit(),f=activeFarm();
+  if(!v){report.innerHTML='<div class="card">Ouvrez une visite.</div>';return}
+  let ss=db.subjects.filter(s=>s.visitId===v.id),fs=getFindings();
+  report.innerHTML=`<div class="card"><h2>Restitution – Audit Ovin</h2><p class="small">Les deux rapports sont indépendants : le Technique reprend les relevés terrain ; l’Expert se concentre sur les calculs, écarts et interprétations.</p><div class="report-choice no-print"><button class="btn" onclick="printReport('technical')">📄 Rapport Technique</button><button class="btn alt" onclick="printReport('expert')">🧠 Rapport Expert</button><button class="btn alt" onclick="exportVisit()">Exporter la visite JSON</button></div></div>
+  <div class="card no-print"><h3>Aperçu synthétique</h3><p><b>${esc(f?.name||'')}</b> — ${esc(v.date)} — ${esc(v.type)}</p><p>${ss.length} sujet(s)/lot(s) • ${fs.length} point(s) à approfondir • ${v.actions.length} action(s)</p></div>
+  <div id="reportPrintHost" class="report-print-only"></div>`;
+}
+function renderBackup(){let c=cloudCfg();backup.innerHTML=`<div class="card"><h2>Supabase / synchronisation</h2><div class="grid"><div class="field"><label>URL Supabase</label><input id="supaUrl" value="${esc(c.url)}"></div><div class="field"><label>Clé publique Supabase</label><input id="supaKey" type="password" value="${esc(c.key)}" placeholder="sb_publishable_... ou anon key"></div></div><div class="actions"><button class="btn" onclick="saveCloudConfig()">Enregistrer Supabase</button><button class="btn alt" onclick="testCloud()">Tester la connexion</button><button class="btn alt" onclick="cloudBackup(true)">Synchroniser maintenant</button><button class="btn alt" onclick="cloudRestore()">Restaurer depuis le cloud</button></div><p class="small">Projet préconfiguré : ${esc(DEFAULT_SUPABASE_URL)}. Les données Ovin utilisent uniquement la table <b>ovin_backups</b>. Les comptes et rôles proviennent de la table <b>profiles</b> commune avec les autres applications.</p></div><div class="card"><h2>Sauvegarde de secours</h2><div class="actions"><button class="btn" onclick="downloadAll()">Télécharger la sauvegarde complète</button><label class="btn alt">Restaurer JSON<input class="hidden" type="file" accept="application/json" onchange="restoreFile(this.files[0])"></label><button class="btn danger" onclick="if(confirm('Tout effacer sur cet appareil ?')){localStorage.removeItem(APP);location.reload()}">Effacer les données locales</button></div><p class="small">Les données restent enregistrées localement, même sans réseau. La synchronisation cloud reprend au retour de la connexion.</p></div><div class="card"><h3>Version</h3><p>Audit Ovin GDS 32-65 – v${APP_VERSION} Supabase</p><p class="small">Version autonome sans base métier ni import CSV. Icône installable et suppression des visites ajoutées en v1.5. PWA renforcée, cache forcé et version visible en v1.6. v1.7 porte les évolutions communes de l’Audit Bovin v14.6.21.23 : PWA séparée, présence collaborative, cloud silencieux, analyse par sujets concernés et rapports Technique/Expert indépendants.</p></div>`}
 function download(name,obj){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();URL.revokeObjectURL(a.href)}
 function downloadAll(){download(`Audit_Ovin_sauvegarde_${new Date().toISOString().slice(0,10)}.json`,db)}function exportVisit(){let v=activeVisit();download(`Audit_Ovin_${v.date}.json`,{farm:activeFarm(),visit:v,subjects:db.subjects.filter(s=>s.visitId===v.id)})}
 function restoreFile(file){let r=new FileReader();r.onload=()=>{try{db=JSON.parse(r.result);save()}catch(e){alert('Fichier invalide')}};r.readAsText(file)}
@@ -420,6 +559,7 @@ document.addEventListener('keydown',e=>{
 });
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){localStorage.setItem(APP,JSON.stringify(db));}});
 window.addEventListener('pagehide',()=>{localStorage.setItem(APP,JSON.stringify(db));});
+setInterval(()=>{if(document.visibilityState==='visible'&&db.activeVisitId&&authSession?.user)refreshVisitPresence(true)},45000);
 
 initTabs();renderAll();applyWorkMode(localStorage.getItem('auditOvin.workMode')||'bureau');initKeyboardDismissButton();applyReviewDeepLink();{let c=cloudCfg();setCloudStatus(c.key?'☁️ Connexion requise':'☁️ Supabase à configurer')}initAuth();if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js?v=1.6',{updateViaCache:'none'}).then(r=>r.update()).catch(()=>{});refreshInstallButton();
 </script>
