@@ -1,0 +1,15 @@
+AUDIT OVIN GDS 32-65 — v1.8
+
+Adaptations spécifiques ovines des nouveautés Audit Bovin :
+- Profil métabolique : Cu, Se, Zn, I, Co, B12 séparée, Mn, Fe, vitamines A/E ; laboratoires et seuils modifiables.
+- Alerte spécifique cuivre ovin : ne pas extrapoler les compléments bovins.
+- Parasitisme ovin : strongles GI (Haemonchus/Teladorsagia/Trichostrongylus/Nematodirus), Dictyocaulus filaria, Fasciola, Dicrocoelium, coccidies, Cryptosporidium, Moniezia.
+- Historique traitement et calcul FECRT avant/après.
+- Molécules et exemples de spécialités ovines à titre d'aide au choix, avec vérification RCP ANMV obligatoire.
+- Alimentation : ration chiffrée par lot, valeurs types des aliments, ajout d'aliments après recherche INRAE-CIRAD-AFZ.
+- Minéraux / bolus : bibliothèque de produits, composition, dose journalière, calcul de couverture selon ingestion MS.
+- Repères minéraux spécifiques ovins, tous modifiables dans Paramètres & seuils.
+- Profil métabolique et parasitisme ajoutés à l'analyse et au rapport Expert.
+
+IMPORTANT :
+Les valeurs types et besoins sont des repères d'aide à la décision. Les analyses du laboratoire et le RCP des médicaments restent prioritaires. Toute décision thérapeutique doit être validée avec le vétérinaire responsable.
