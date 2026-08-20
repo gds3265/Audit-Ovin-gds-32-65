@@ -1,0 +1,7 @@
+Audit Ovin GDS 32-65 — v2.2
+
+- Questionnaire éleveur pré/post-visite ajouté avec supports papier.
+- Bilan sanitaire partenaire étoffé : mortalités, reproduction, boiteries, diarrhées, pneumonies, traitements, production.
+- Données technico-économiques partenaire structurées.
+- Repères couleur : à demander, à mesurer, à récupérer après visite, calculable.
+- Check-up fin de visite rendu responsive sur tablette.

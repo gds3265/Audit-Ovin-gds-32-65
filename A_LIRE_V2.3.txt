@@ -1,0 +1,7 @@
+Audit Ovin GDS 32-65 — v2.3
+- libellés économiques en français ;
+- boutons Ajouter replacés dans chaque catégorie du Suivi de l’étude ;
+- Paramètres & seuils et Sauvegarde séparés du workflow ;
+- recherche globale ;
+- documents imprimables en Préparation (vierge / préparé) ;
+- import scan/photo d’un audit papier, OCR natif tenté si disponible, validation requise.
