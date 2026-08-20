@@ -1,0 +1,5 @@
+Audit Ovin GDS 32-65 v2.1
+
+Ajout du temps passé pour chaque intervenant.
+Ajout du temps GDS : préparation, terrain, compte rendu/analyse et suivi, avec total automatique.
+Toutes les fonctions de la v2.0 sont conservées.
