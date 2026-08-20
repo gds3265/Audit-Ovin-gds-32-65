@@ -1,0 +1,1 @@
+v2.6 : marge de progrès ovine détaillée/corrigée, boiteries et mammites dans les calculs, avortement = valeur agneau(x) + frais véto/analyses, onglets Pré-questionnaire / Analyse nutritionnelle / Journal.
