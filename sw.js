@@ -1,10 +1,10 @@
-const C='audit-ovin-v1.8';
+const C='audit-ovin-v1.9';
 const PREFIX='audit-ovin-';
 const BASE='/Audit-Ovin-gds-32-65/';
 const STATIC=[
-  BASE,BASE+'index.html',BASE+'manifest.webmanifest?v=1.8',
-  BASE+'icon-192.png?v=1.8',BASE+'icon-512.png?v=1.8',
-  BASE+'icon-maskable-512.png?v=1.8',BASE+'apple-touch-icon.png?v=1.8'
+  BASE,BASE+'index.html',BASE+'manifest.webmanifest?v=1.9',
+  BASE+'icon-192.png?v=1.9',BASE+'icon-512.png?v=1.9',
+  BASE+'icon-maskable-512.png?v=1.9',BASE+'apple-touch-icon.png?v=1.9'
 ];
 self.addEventListener('install',e=>{
   self.skipWaiting();

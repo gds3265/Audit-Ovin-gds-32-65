@@ -1,0 +1,9 @@
+Audit Ovin GDS 32-65 — v1.9
+
+Refonte globale des analyses et du workflow :
+- navigation en 3 phases : Préparation / Terrain / Analyse & restitution ;
+- LEAV Vendée préconfiguré avec les références ovines/caprines fournies ;
+- ajout Magnésium et Vitamine D3 (25-OH-D3) comme analytes, sans inventer de seuil ovin lorsqu'il n'est pas fourni ;
+- parasitisme assoupli + pepsinogène saisissable + sérologie grande douve ;
+- analyse d'eau Public Labos / LPL, avec repères eau ovins/caprins ;
+- maintien des précautions spécifiques au cuivre chez les ovins.
