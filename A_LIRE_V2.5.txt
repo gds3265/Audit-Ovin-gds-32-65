@@ -1,0 +1,4 @@
+Audit Ovin v2.5
+- Recherche sans raccourcis, index léger
+- Outils compacts dans le bandeau des phases
+- Recopie intelligente résultat labo (photo/PDF + OCR natif si disponible)
